@@ -6,6 +6,9 @@
 store/data/raw/
 store/data/processed/
 store/models/
+!store/data/raw/*.dvc
+!store/data/processed/*.dvc
+!store/models/*.dvc
 
 
 
