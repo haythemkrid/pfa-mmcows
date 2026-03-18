@@ -46,4 +46,4 @@ dist/
 Thumbs.db
 # DVC and credentials (auto-added by setup script)
 /.env
- 
+
