@@ -10,8 +10,6 @@ store/models/
 !store/data/processed/*.dvc
 !store/models/*.dvc
 
-
-
 # Environment variables - NEVER commit these!
 .env
 .env.local
