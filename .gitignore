@@ -3,9 +3,10 @@
 .dvc/config.local  # Contains DVC credentials
 
 # Data tracked by DVC, not Git
-/data/raw/
-/data/processed/
-/models/
+store/data/raw/
+store/data/processed/
+store/models/
+
 
 
 # Environment variables - NEVER commit these!
