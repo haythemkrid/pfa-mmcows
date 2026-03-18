@@ -1,3 +1,45 @@
-.venv
-data/processed/*
-data/raw/*
+# NEVER commit credentials!
+.env
+.dvc/config.local  # Contains DVC credentials
+
+# Data tracked by DVC, not Git
+/data/raw/
+/data/processed/
+/models/
+
+
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+
+# DVC
+/.dvc/config.local
+/.dvc/tmp
+/.dvc/cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+# DVC and credentials (auto-added by setup script)
+/.env
