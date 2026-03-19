@@ -1,0 +1,6 @@
+outs:
+- md5: d77bdeb13ae8d5b02215b2e2d1126725.dir
+  size: 18129830194
+  nfiles: 1171
+  hash: md5
+  path: sensor_data
