@@ -28,7 +28,7 @@ log_debug() {
 
 # Function to setup virtual environment and install requirements
 # Function to setup virtual environment and install requirements
-setup_python_enviroment() {
+setup_python_environment() {
     log_info "Checking Python environment..."
 
     # 1. Check if already active or exists
