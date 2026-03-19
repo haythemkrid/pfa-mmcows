@@ -1,0 +1,6 @@
+outs:
+- md5: f623cc4a4b9cbe37188ef943de8adfc9.dir
+  size: 13572866364
+  nfiles: 427390
+  hash: md5
+  path: cropped_bboxes
