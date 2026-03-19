@@ -26,6 +26,102 @@ log_debug() {
     echo -e "${BLUE}[DEBUG]${NC} $1"
 }
 
+# Function to setup virtual environment and install requirements
+setup_python_environment() {
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info "Setting up Python environment..."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    # Check if Python is installed
+    if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
+        log_error "Python is not installed. Please install Python 3.7+ first."
+        exit 1
+    fi
+    
+    # Determine python command
+    if command -v python3 &> /dev/null; then
+        PYTHON_CMD="python3"
+    else
+        PYTHON_CMD="python"
+    fi
+    
+    log_info "Found Python: $($PYTHON_CMD --version)"
+    echo ""
+    
+    # Check if virtual environment exists
+    if [ -d ".venv" ]; then
+        log_info "Virtual environment already exists at .venv"
+        
+        # Check if it's activated
+        if [[ "${VIRTUAL_ENV:-}" != "" ]]; then
+            log_info "Virtual environment is already activated ✓"
+        else
+            log_warn "Virtual environment exists but is not activated"
+            log_info "Activating virtual environment..."
+            source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null || {
+                log_error "Failed to activate virtual environment"
+                log_error "Please activate manually:"
+                log_error "  source .venv/bin/activate (Linux/Mac)"
+                log_error "  .venv\\Scripts\\activate (Windows)"
+                exit 1
+            }
+            log_info "Virtual environment activated ✓"
+        fi
+    else
+        log_info "Creating virtual environment at .venv..."
+        
+        if $PYTHON_CMD -m venv .venv; then
+            log_info "Virtual environment created successfully ✓"
+        else
+            log_error "Failed to create virtual environment"
+            log_error "Make sure python3-venv is installed:"
+            log_error "  sudo apt-get install python3-venv (Debian/Ubuntu)"
+            log_error "  sudo yum install python3-venv (RedHat/CentOS)"
+            exit 1
+        fi
+        
+        log_info "Activating virtual environment..."
+        source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null || {
+            log_error "Failed to activate virtual environment"
+            exit 1
+        }
+        log_info "Virtual environment activated ✓"
+    fi
+    
+    echo ""
+    
+    # Install/upgrade pip
+    log_info "Upgrading pip..."
+    $PYTHON_CMD -m pip install --upgrade pip --quiet
+    log_info "pip upgraded ✓"
+    
+    echo ""
+    
+    # Check if requirements.txt exists
+    if [ -f "requirements.txt" ]; then
+        log_info "Found requirements.txt"
+        log_info "Installing requirements..."
+        echo ""
+        
+        if $PYTHON_CMD -m pip install -r requirements.txt; then
+            log_info "Requirements installed successfully ✓"
+        else
+            log_error "Failed to install requirements"
+            exit 1
+        fi
+    else
+        log_warn "requirements.txt not found - skipping package installation"
+        log_info "If you need to install packages later, create requirements.txt and run:"
+        log_info "  pip install -r requirements.txt"
+    fi
+    
+    echo ""
+    log_info "Python environment setup complete ✓"
+    echo ""
+}
+
 # Function to load .env file
 load_env() {
     local env_file="${1:-.env}"
@@ -52,9 +148,22 @@ load_env() {
 # Function to check if DVC is installed
 check_dvc_installed() {
     if ! command -v dvc &> /dev/null; then
-        log_error "DVC is not installed. Please install it first:"
-        log_error "  pip install dvc[s3]"
-        exit 1
+        log_error "DVC is not installed."
+        log_error ""
+        log_error "Installing DVC..."
+        
+        if command -v pip &> /dev/null || command -v pip3 &> /dev/null; then
+            pip install 'dvc[s3]' || pip3 install 'dvc[s3]' || {
+                log_error "Failed to install DVC"
+                log_error "Please install manually: pip install 'dvc[s3]'"
+                exit 1
+            }
+            log_info "DVC installed successfully ✓"
+        else
+            log_error "pip is not available. Please install DVC manually:"
+            log_error "  pip install 'dvc[s3]'"
+            exit 1
+        fi
     fi
     log_info "DVC found: $(dvc version | head -1)"
 }
@@ -195,6 +304,7 @@ update_gitignore() {
         "/.env"
         "/.dvc/tmp"
         "/.dvc/cache"
+        "/.venv"
     )
     
     if [[ ! -f .gitignore ]]; then
@@ -208,6 +318,9 @@ update_gitignore() {
 # Environment variables
 /.env
 
+# Python Virtual Environment
+/.venv
+
 EOF
         log_info ".gitignore created ✓"
         return
@@ -218,7 +331,7 @@ EOF
         if ! grep -qF "$entry" .gitignore; then
             if [[ $added -eq 0 ]]; then
                 echo "" >> .gitignore
-                echo "# DVC and credentials (auto-added by setup script)" >> .gitignore
+                echo "# DVC, credentials, and Python env (auto-added by setup script)" >> .gitignore
             fi
             echo "$entry" >> .gitignore
             log_info "Added to .gitignore: $entry"
@@ -255,19 +368,25 @@ display_summary() {
     echo "  Remote name: $DVC_REMOTE_NAME"
     echo "  S3 bucket:   $DVC_S3_BUCKET"
     echo "  Endpoint:    $DVC_ENDPOINT_URL"
+    if [[ "${VIRTUAL_ENV:-}" != "" ]]; then
+        echo "  Python venv: $VIRTUAL_ENV"
+    fi
     echo ""
     echo "Next steps:"
-    echo "  1. Track data with DVC:"
+    echo "  1. Activate virtual environment (if not already):"
+    echo "     source .venv/bin/activate"
+    echo ""
+    echo "  2. Track data with DVC:"
     echo "     dvc add data/"
     echo ""
-    echo "  2. Push data to remote:"
+    echo "  3. Push data to remote:"
     echo "     dvc push"
     echo ""
-    echo "  3. Commit DVC files to git:"
+    echo "  4. Commit DVC files to git:"
     echo "     git add .dvc/config .dvc/.gitignore data.dvc .gitignore"
     echo "     git commit -m 'Initialize DVC tracking'"
     echo ""
-    echo "  4. Pull data on another machine:"
+    echo "  5. Pull data on another machine:"
     echo "     git clone <repo>"
     echo "     cp .env.example .env  # and fill credentials"
     echo "     ./setup_dvc.sh"
@@ -281,6 +400,13 @@ main() {
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${BLUE}DVC Setup Script for DagHub${NC}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # STEP 1: Setup Python environment (NEW!)
+    setup_python_environment
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info "Setting up DVC..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
@@ -313,7 +439,11 @@ case "${1:-}" in
         echo "Options:"
         echo "  --help, -h     Show this help message"
         echo ""
-        echo "This script initializes DVC with credentials from a .env file"
+        echo "This script:"
+        echo "  1. Sets up Python virtual environment (.venv)"
+        echo "  2. Installs requirements from requirements.txt"
+        echo "  3. Initializes DVC with credentials from .env file"
+        echo ""
         echo "Make sure to create .env from .env.example first"
         exit 0
         ;;
