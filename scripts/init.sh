@@ -29,45 +29,57 @@ log_debug() {
 # Function to setup virtual environment and install requirements
 # Function to setup virtual environment and install requirements
 setup_python_environment() {
-    log_info "Checking Python environment..."
+   log_info "Checking Python environment..."
 
-    # 1. Check if already active or exists
+    # 1. Check if already active
     if [[ -n "${VIRTUAL_ENV:-}" ]]; then
         log_info "Already running inside a virtual environment: $VIRTUAL_ENV"
-    elif [[ -d ".venv" ]]; then
-        log_info "Found existing .venv directory. Activating..."
-        source .venv/bin/activate
     else
-        log_warn "No virtual environment found. Creating one..."
-        
-        # Try standard creation first
-        if python3 -m venv .venv; then
-            log_info "Virtual environment created successfully ✓"
+        # 2. Check if .venv exists AND is valid
+        if [[ -d ".venv" && -f ".venv/bin/activate" ]]; then
+            log_info "Found valid .venv directory. Activating..."
             source .venv/bin/activate
         else
-            log_warn "Standard venv creation failed (ensurepip error). Attempting bootstrap..."
-            # Fallback: Create without pip to avoid the exit status 1 error
-            if python3 -m venv --without-pip .venv; then
+            # If directory exists but is broken, remove it
+            if [[ -d ".venv" ]]; then
+                log_warn "Existing .venv is broken (missing activation script). Repairing..."
+                rm -rf .venv
+            fi
+
+            log_info "Creating a new virtual environment..."
+            # Try standard creation first
+            if python3 -m venv .venv; then
+                log_info "Virtual environment created successfully ✓"
                 source .venv/bin/activate
-                log_info "Venv created without pip. Bootstrapping pip now..."
-                # Download and install pip manually inside the venv
-                if curl -sS https://bootstrap.pypa.io/get-pip.py | python3; then
-                    log_info "Pip bootstrapped successfully ✓"
+            else
+                log_warn "Standard venv creation failed (ensurepip error). Attempting bootstrap..."
+                # Fallback for the error you had earlier
+                if python3 -m venv --without-pip .venv; then
+                    if [[ -f ".venv/bin/activate" ]]; then
+                        source .venv/bin/activate
+                    else
+                        log_error "Venv creation failed to generate activation script."
+                        exit 1
+                    fi
+                    
+                    log_info "Venv created without pip. Bootstrapping pip now..."
+                    if curl -sS https://bootstrap.pypa.io/get-pip.py | python3; then
+                        log_info "Pip bootstrapped successfully ✓"
+                    else
+                        log_error "Failed to bootstrap pip. Please install python3-venv on your system."
+                        exit 1
+                    fi
                 else
-                    log_error "Failed to bootstrap pip. Please install python3-venv on your system."
+                    log_error "Critical: Could not create virtual environment directory."
                     exit 1
                 fi
-            else
-                log_error "Critical: Could not create virtual environment directory."
-                exit 1
             fi
         fi
     fi
 
-    # 2. Install requirements.txt
+    # 3. Install requirements.txt
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing dependencies from requirements.txt..."
-        # Use python3 -m pip to ensure we stay within the venv context
         if python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt; then
             log_info "Dependencies installed successfully ✓"
         else
@@ -76,7 +88,6 @@ setup_python_environment() {
         fi
     else
         log_warn "requirements.txt not found. Skipping dependency installation."
-        # Even if no requirements, we still need DVC for the rest of your script
         if ! command -v dvc &> /dev/null; then
             log_info "DVC not found in venv, installing dvc[s3]..."
             python3 -m pip install "dvc[s3]"
