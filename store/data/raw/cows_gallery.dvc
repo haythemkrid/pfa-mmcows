@@ -1,0 +1,6 @@
+outs:
+- md5: 4a5805f049fd6c63a81031b25013eb4e.dir
+  size: 1921401532
+  nfiles: 483
+  hash: md5
+  path: cows_gallery
