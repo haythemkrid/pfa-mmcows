@@ -47,3 +47,6 @@ Thumbs.db
 # DVC and credentials (auto-added by setup script)
 /.env
 
+
+# DVC, credentials, and Python env (auto-added by setup script)
+/.venv
