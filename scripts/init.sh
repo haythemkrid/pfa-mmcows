@@ -27,99 +27,61 @@ log_debug() {
 }
 
 # Function to setup virtual environment and install requirements
-setup_python_environment() {
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    log_info "Setting up Python environment..."
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    
-    # Check if Python is installed
-    if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-        log_error "Python is not installed. Please install Python 3.7+ first."
-        exit 1
-    fi
-    
-    # Determine python command
-    if command -v python3 &> /dev/null; then
-        PYTHON_CMD="python3"
+# Function to setup virtual environment and install requirements
+setup_python_enviroment() {
+    log_info "Checking Python environment..."
+
+    # 1. Check if already active or exists
+    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+        log_info "Already running inside a virtual environment: $VIRTUAL_ENV"
+    elif [[ -d ".venv" ]]; then
+        log_info "Found existing .venv directory. Activating..."
+        source .venv/bin/activate
     else
-        PYTHON_CMD="python"
-    fi
-    
-    log_info "Found Python: $($PYTHON_CMD --version)"
-    echo ""
-    
-    # Check if virtual environment exists
-    if [ -d ".venv" ]; then
-        log_info "Virtual environment already exists at .venv"
+        log_warn "No virtual environment found. Creating one..."
         
-        # Check if it's activated
-        if [[ "${VIRTUAL_ENV:-}" != "" ]]; then
-            log_info "Virtual environment is already activated ✓"
-        else
-            log_warn "Virtual environment exists but is not activated"
-            log_info "Activating virtual environment..."
-            source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null || {
-                log_error "Failed to activate virtual environment"
-                log_error "Please activate manually:"
-                log_error "  source .venv/bin/activate (Linux/Mac)"
-                log_error "  .venv\\Scripts\\activate (Windows)"
-                exit 1
-            }
-            log_info "Virtual environment activated ✓"
-        fi
-    else
-        log_info "Creating virtual environment at .venv..."
-        
-        if $PYTHON_CMD -m venv .venv; then
+        # Try standard creation first
+        if python3 -m venv .venv; then
             log_info "Virtual environment created successfully ✓"
+            source .venv/bin/activate
         else
-            log_error "Failed to create virtual environment"
-            log_error "Make sure python3-venv is installed:"
-            log_error "  sudo apt-get install python3-venv (Debian/Ubuntu)"
-            log_error "  sudo yum install python3-venv (RedHat/CentOS)"
-            exit 1
+            log_warn "Standard venv creation failed (ensurepip error). Attempting bootstrap..."
+            # Fallback: Create without pip to avoid the exit status 1 error
+            if python3 -m venv --without-pip .venv; then
+                source .venv/bin/activate
+                log_info "Venv created without pip. Bootstrapping pip now..."
+                # Download and install pip manually inside the venv
+                if curl -sS https://bootstrap.pypa.io/get-pip.py | python3; then
+                    log_info "Pip bootstrapped successfully ✓"
+                else
+                    log_error "Failed to bootstrap pip. Please install python3-venv on your system."
+                    exit 1
+                fi
+            else
+                log_error "Critical: Could not create virtual environment directory."
+                exit 1
+            fi
         fi
-        
-        log_info "Activating virtual environment..."
-        source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null || {
-            log_error "Failed to activate virtual environment"
-            exit 1
-        }
-        log_info "Virtual environment activated ✓"
     fi
-    
-    echo ""
-    
-    # Install/upgrade pip
-    log_info "Upgrading pip..."
-    $PYTHON_CMD -m pip install --upgrade pip --quiet
-    log_info "pip upgraded ✓"
-    
-    echo ""
-    
-    # Check if requirements.txt exists
-    if [ -f "requirements.txt" ]; then
-        log_info "Found requirements.txt"
-        log_info "Installing requirements..."
-        echo ""
-        
-        if $PYTHON_CMD -m pip install -r requirements.txt; then
-            log_info "Requirements installed successfully ✓"
+
+    # 2. Install requirements.txt
+    if [[ -f "requirements.txt" ]]; then
+        log_info "Installing dependencies from requirements.txt..."
+        # Use python3 -m pip to ensure we stay within the venv context
+        if python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt; then
+            log_info "Dependencies installed successfully ✓"
         else
-            log_error "Failed to install requirements"
+            log_error "Failed to install dependencies from requirements.txt"
             exit 1
         fi
     else
-        log_warn "requirements.txt not found - skipping package installation"
-        log_info "If you need to install packages later, create requirements.txt and run:"
-        log_info "  pip install -r requirements.txt"
+        log_warn "requirements.txt not found. Skipping dependency installation."
+        # Even if no requirements, we still need DVC for the rest of your script
+        if ! command -v dvc &> /dev/null; then
+            log_info "DVC not found in venv, installing dvc[s3]..."
+            python3 -m pip install "dvc[s3]"
+        fi
     fi
-    
-    echo ""
-    log_info "Python environment setup complete ✓"
-    echo ""
 }
 
 # Function to load .env file
