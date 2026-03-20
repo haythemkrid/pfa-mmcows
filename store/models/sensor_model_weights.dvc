@@ -1,0 +1,6 @@
+outs:
+- md5: 75af58cb3a6b66c35047fa8f86fcd55a.dir
+  size: 370389630
+  nfiles: 43
+  hash: md5
+  path: sensor_model_weights
