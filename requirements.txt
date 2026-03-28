@@ -1,1 +1,37 @@
 dvc_s3
+
+numpy>=1.26.0
+pandas>=2.1.0
+scipy>=1.11.0
+
+# --- Deep Learning (PyTorch Stack) ---
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+
+# --- Machine Learning & Boosting ---
+scikit-learn>=1.4.0
+statsmodels>=0.14.0
+xgboost>=2.0.0
+lightgbm>=4.3.0
+catboost>=1.2.0
+
+# --- Visualization ---
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.18.0
+
+# --- NLP & Computer Vision Extras ---
+transformers>=4.38.0
+datasets>=2.17.0
+opencv-python>=4.9.0
+pillow>=10.2.0
+
+# --- Utilities & Environment ---
+jupyterlab
+ipykernel
+tqdm
+python-dotenv
+pyyaml
+h5py
+requests

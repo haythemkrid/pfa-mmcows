@@ -215,42 +215,29 @@ init_dvc() {
 configure_remote() {
     log_info "Configuring DVC remote: $DVC_REMOTE_NAME"
     
-    # Check if remote already exists
-    if dvc remote list 2>/dev/null | grep -q "^$DVC_REMOTE_NAME"; then
-        log_warn "Remote '$DVC_REMOTE_NAME' already exists - removing and recreating"
-        dvc remote remove "$DVC_REMOTE_NAME" 2>/dev/null || true
-    fi
-    
-    # Add remote
-    if dvc remote add "$DVC_REMOTE_NAME" "$DVC_S3_BUCKET"; then
+    # 1. Add (or overwrite) the remote and set as default (-d)
+    # Using -f (force) handles existing remotes gracefully
+    if dvc remote add -d -f "$DVC_REMOTE_NAME" "$DVC_S3_BUCKET" -q; then
         log_info "Remote added: $DVC_REMOTE_NAME -> $DVC_S3_BUCKET"
     else
         log_error "Failed to add remote"
         exit 1
     fi
     
-    # Configure endpoint URL
-    if dvc remote modify "$DVC_REMOTE_NAME" endpointurl "$DVC_ENDPOINT_URL"; then
+    # 2. Configure endpoint URL (Critical for MinIO/S3-compatible storage)
+    if dvc remote modify "$DVC_REMOTE_NAME" endpointurl "$DVC_ENDPOINT_URL" -q; then
         log_info "Endpoint URL configured: $DVC_ENDPOINT_URL"
     else
         log_error "Failed to configure endpoint URL"
         exit 1
     fi
     
-    # Configure credentials (local only, not committed to git)
-    if dvc remote modify "$DVC_REMOTE_NAME" --local access_key_id "$DVC_ACCESS_KEY_ID"; then
-        log_info "Access key ID configured (local) ✓"
-    else
-        log_error "Failed to configure access key ID"
-        exit 1
-    fi
+    # 3. Configure credentials (Local-only, secure)
+    # We wrap these in a subshell or silence them to avoid leaking keys in logs
+    dvc remote modify "$DVC_REMOTE_NAME" --local access_key_id "$DVC_ACCESS_KEY_ID" -q
+    dvc remote modify "$DVC_REMOTE_NAME" --local secret_access_key "$DVC_SECRET_ACCESS_KEY" -q
     
-    if dvc remote modify "$DVC_REMOTE_NAME" --local secret_access_key "$DVC_SECRET_ACCESS_KEY"; then
-        log_info "Secret access key configured (local) ✓"
-    else
-        log_error "Failed to configure secret access key"
-        exit 1
-    fi
+    log_info "Credentials configured in .dvc/config.local ✓"
 }
 
 # Function to verify configuration
