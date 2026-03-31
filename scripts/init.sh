@@ -29,7 +29,13 @@ log_debug() {
 # Function to setup virtual environment and install requirements
 # Function to setup virtual environment and install requirements
 setup_python_environment() {
-   log_info "Checking Python environment..."
+    log_info "Checking Python environment..."
+
+    # NEW: Detect Kaggle environment
+    if [[ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ]]; then
+        log_info "Kaggle environment detected. Skipping venv and requirements installation."
+        return 0
+    fi
 
     # 1. Check if already active
     if [[ -n "${VIRTUAL_ENV:-}" ]]; then
@@ -40,58 +46,33 @@ setup_python_environment() {
             log_info "Found valid .venv directory. Activating..."
             source .venv/bin/activate
         else
-            # If directory exists but is broken, remove it
             if [[ -d ".venv" ]]; then
-                log_warn "Existing .venv is broken (missing activation script). Repairing..."
+                log_warn "Existing .venv is broken. Repairing..."
                 rm -rf .venv
             fi
 
             log_info "Creating a new virtual environment..."
-            # Try standard creation first
             if python3 -m venv .venv; then
                 log_info "Virtual environment created successfully ✓"
                 source .venv/bin/activate
             else
-                log_warn "Standard venv creation failed (ensurepip error). Attempting bootstrap..."
-                # Fallback for the error you had earlier
+                log_warn "Standard venv creation failed. Attempting bootstrap..."
                 if python3 -m venv --without-pip .venv; then
-                    if [[ -f ".venv/bin/activate" ]]; then
-                        source .venv/bin/activate
-                    else
-                        log_error "Venv creation failed to generate activation script."
-                        exit 1
-                    fi
-                    
-                    log_info "Venv created without pip. Bootstrapping pip now..."
-                    if curl -sS https://bootstrap.pypa.io/get-pip.py | python3; then
-                        log_info "Pip bootstrapped successfully ✓"
-                    else
-                        log_error "Failed to bootstrap pip. Please install python3-venv on your system."
-                        exit 1
-                    fi
+                    source .venv/bin/activate
+                    log_info "Venv created without pip. Bootstrapping pip..."
+                    curl -sS https://bootstrap.pypa.io/get-pip.py | python3
                 else
-                    log_error "Critical: Could not create virtual environment directory."
+                    log_error "Critical: Could not create virtual environment."
                     exit 1
                 fi
             fi
         fi
     fi
 
-    # 3. Install requirements.txt
+    # 3. Install requirements.txt (This will now only run if NOT on Kaggle)
     if [[ -f "requirements.txt" ]]; then
         log_info "Installing dependencies from requirements.txt..."
-        if python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt; then
-            log_info "Dependencies installed successfully ✓"
-        else
-            log_error "Failed to install dependencies from requirements.txt"
-            exit 1
-        fi
-    else
-        log_warn "requirements.txt not found. Skipping dependency installation."
-        if ! command -v dvc &> /dev/null; then
-            log_info "DVC not found in venv, installing dvc[s3]..."
-            python3 -m pip install "dvc[s3]"
-        fi
+        python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
     fi
 }
 
