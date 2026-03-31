@@ -174,16 +174,11 @@ validate_config() {
 # Function to initialize DVC
 init_dvc() {
     if [[ -d .dvc ]]; then
-        log_warn "DVC already initialized in this directory"
-        read -p "Do you want to reinitialize? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Skipping DVC initialization"
-            return 0
-        fi
+        log_info "DVC already initialized. Reinitializing with --force..."
     fi
     
     log_info "Initializing DVC..."
+    # Using --force ensures it runs without asking for confirmation
     if dvc init --force; then
         log_info "DVC initialized successfully ✓"
     else
