@@ -3,9 +3,7 @@
 .dvc/config.local  # Contains DVC credentials
 
 # Data tracked by DVC, not Git
-store/data/raw/*
-store/data/processed/*
-store/models/*
+
 !store/data/raw/*.dvc
 !store/data/processed/*.dvc
 !store/models/*.dvc
@@ -54,3 +52,5 @@ Thumbs.db
 
 # DVC, credentials, and Python env (auto-added by setup script)
 /.venv
+
+vscode_cli.tar.gz
