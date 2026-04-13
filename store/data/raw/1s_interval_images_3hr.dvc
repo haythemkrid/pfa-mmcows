@@ -1,0 +1,6 @@
+outs:
+- md5: ab3241dbaca26d4e86e44b10b125dc38.dir
+  size: 31043780924
+  nfiles: 43203
+  hash: md5
+  path: 1s_interval_images_3hr
