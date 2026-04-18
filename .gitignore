@@ -4,16 +4,18 @@
 
 # Data tracked by DVC, not Git
 
+# 1. Ignore everything in these folders first
+store/data/raw/*
+store/data/processed/*
+store/models/*
+
+# 2. Add exceptions for DVC and Gitkeep files
 !store/data/raw/*.dvc
 !store/data/processed/*.dvc
 !store/models/*.dvc
 !store/data/raw/.gitkeep
 !store/data/processed/.gitkeep
 !store/models/.gitkeep
-store/data/raw/*
-store/data/processed/*
-store/models/*
-
 # Environment variables - NEVER commit these!
 .env
 .env.local
