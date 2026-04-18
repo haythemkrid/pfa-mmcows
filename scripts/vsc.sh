@@ -1,4 +1,3 @@
-%%writefile setup_vscode.sh
 #!/bin/bash
 
 # Configuration
