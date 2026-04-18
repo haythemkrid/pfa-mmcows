@@ -1,0 +1,7 @@
+sensor_data_dir: /home/haythem/vscode/pfa-mmcows/store/data/raw/sensor_data
+visual_data_dir: /home/haythem/vscode/pfa-mmcows/store/data/raw/visual_data
+split_config_dir: /home/haythem/vscode/mmcows_internal/configs
+
+
+
+
