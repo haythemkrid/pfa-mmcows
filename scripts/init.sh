@@ -29,7 +29,7 @@ log_debug() {
 # Function to setup virtual environment and install requirements
 # Function to setup virtual environment and install requirements
 setup_python_environment() {
-    log_info "Checking Python environment..."
+    log_info "Environment setup requested. Checking Python environment..."
 
     # 1. Detect if our shared Conda environment is active
     if [[ "${CONDA_DEFAULT_ENV:-}" == "pfa-mmcows-env" ]]; then
@@ -37,22 +37,29 @@ setup_python_environment() {
         return 0
     fi
 
-    # 2. NEW: Detect Kaggle environment
-    if [[ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ]]; then
-        log_info "Kaggle environment detected. Skipping venv."
-        return 0
-    fi
-
-    # 3. Fallback for local development (Laptop/PC)
-    if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+    # 2. Check if already active
+    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+        log_info "Already running inside a virtual environment: $VIRTUAL_ENV"
+    else
+        # 3. Handle .venv creation/repair
         if [[ -d ".venv" && -f ".venv/bin/activate" ]]; then
             log_info "Found valid .venv directory. Activating..."
             source .venv/bin/activate
         else
-            log_info "No shared env or .venv found. Proceeding with local .venv creation..."
+            if [[ -d ".venv" ]]; then
+                log_warn "Existing .venv is broken. Repairing..."
+                rm -rf .venv
+            fi
+            log_info "Creating a new virtual environment..."
             python3 -m venv .venv
             source .venv/bin/activate
         fi
+    fi
+
+    # Install requirements if they exist
+    if [[ -f "requirements.txt" ]]; then
+        log_info "Installing dependencies from requirements.txt..."
+        python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
     fi
 }
 
@@ -62,23 +69,29 @@ load_env() {
     
     if [[ ! -f "$env_file" ]]; then
         log_error ".env file not found: $env_file"
-        log_error ""
-        log_error "Please create a .env file with your credentials:"
-        log_error "  cp .env.example .env"
-        log_error "  # Edit .env and add your actual credentials"
         exit 1
     fi
     
     log_info "Loading environment from: $env_file"
     
-    # Load .env file, ignoring comments and empty lines
-    set -a  # Automatically export all variables
-    source <(grep -v '^#' "$env_file" | grep -v '
-cd /kaggle/input/datasets/haythemkrid/pfa-mmcows && scripts/init.sh
-dvc pull s^$' | sed 's/\r$//')
-    set +a
+    # Read the file line by line, skip comments and empty lines
+    while IFS='=' read -r key value || [[ -n "$key" ]]; do
+        # Skip comments
+        if [[ "$key" =~ ^#.* ]] || [[ -z "$key" ]]; then
+            continue
+        fi
+        
+        # Clean the key and value (remove whitespace/quotes/carriage returns)
+        key=$(echo "$key" | tr -d '[:space:]')
+        value=$(echo "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^["'\'']//' -e 's/["'\'']$//' -e 's/\r$//')
+
+        if [[ -n "$key" ]]; then
+            export "$key=$value"
+            log_debug "Exported: $key"
+        fi
+    done < "$env_file"
     
-    log_debug "Environment variables loaded"
+    log_info "Environment variables loaded successfully ✓"
 }
 
 # Function to check if DVC is installed
@@ -314,38 +327,36 @@ display_summary() {
 }
 
 # Main execution
+# Main execution
 main() {
+    local setup_env=${1:-false}
+
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${BLUE}DVC Setup Script for DagHub${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    # STEP 1: Setup Python environment (NEW!)
-    setup_python_environment
+    # STEP 1: Setup Python environment (Only if flag is true)
+    if [ "$setup_env" = true ]; then
+        setup_python_environment
+    else
+        log_info "Skipping environment setup (use --setup-env to enable)."
+    fi
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log_info "Setting up DVC..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
-    # Load environment variables from .env
     load_env
-    
-    # Validate everything
     check_dvc_installed
     validate_config
     validate_credentials
-    
-    # Setup DVC
     init_dvc
     configure_remote
     update_gitignore
-    
-    # Verify and test
     verify_configuration
     test_connection
-    
-    # Show summary
     display_summary
 }
 
@@ -355,17 +366,14 @@ case "${1:-}" in
         echo "Usage: $0 [options]"
         echo ""
         echo "Options:"
+        echo "  --setup-env    Create and configure the Python virtual environment"
         echo "  --help, -h     Show this help message"
-        echo ""
-        echo "This script:"
-        echo "  1. Sets up Python virtual environment (.venv)"
-        echo "  2. Installs requirements from requirements.txt"
-        echo "  3. Initializes DVC with credentials from .env file"
-        echo ""
-        echo "Make sure to create .env from .env.example first"
         exit 0
         ;;
+    --setup-env)
+        main true
+        ;;
     *)
-        main "$@"
+        main false
         ;;
 esac
