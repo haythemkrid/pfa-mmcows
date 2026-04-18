@@ -3,14 +3,18 @@
 # Configuration
 INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
-TUNNEL_NAME="pfa-$(whoami)" # e.g., pfa-haythem, pfa-iheb
+TUNNEL_NAME="pfa-$(whoami)" # e.g., pfa-haythem, pfa-iheb, pfa-oussema
 
 # 1. Download VS Code CLI if missing
 if [ ! -f "$INSTALL_DIR/code" ]; then
     echo "Downloading VS Code CLI..."
-    wget -O /tmp/vscode_cli.tar.gz 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64'
-    tar -xf /tmp/vscode_cli.tar.gz -C "$INSTALL_DIR"
+    # Added _$USER to the filename to prevent permission conflicts between accounts
+    wget -O /tmp/vscode_cli_$USER.tar.gz 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64'
+    tar -xf /tmp/vscode_cli_$USER.tar.gz -C "$INSTALL_DIR"
     chmod +x "$INSTALL_DIR/code"
+    
+    # Clean up the downloaded tar file to save space
+    rm /tmp/vscode_cli_$USER.tar.gz
 fi
 
 # 2. Setup a "Session-Locked" Tunnel script
