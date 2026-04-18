@@ -1,0 +1,28 @@
+stages:
+  # Stage 1: Vision Processing
+  extract_frames:
+    cmd: python src/vision/extract.py
+    deps:
+      - src/vision/extract.py
+      - store/data/raw/visual_data/
+    outs:
+      - store/data/interim/frames/
+
+  # Stage 2: Sensor Processing
+  clean_sensors:
+    cmd: python src/sensors/parse.py
+    deps:
+      - src/sensors/parse.py
+      - store/data/raw/sensor_logs.csv
+    outs:
+      - store/data/interim/sensors_cleaned.csv
+
+  # Stage 3: The Fusion
+  sync_data:
+    cmd: python src/fusion/sync.py
+    deps:
+      - src/fusion/sync.py
+      - store/data/interim/frames/
+      - store/data/interim/sensors_cleaned.csv
+    outs:
+      - store/data/processed/fused_dataset.pkl
