@@ -31,48 +31,28 @@ log_debug() {
 setup_python_environment() {
     log_info "Checking Python environment..."
 
-    # NEW: Detect Kaggle environment
-    if [[ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ]]; then
-        log_info "Kaggle environment detected. Skipping venv and requirements installation."
+    # 1. Detect if our shared Conda environment is active
+    if [[ "${CONDA_DEFAULT_ENV:-}" == "pfa-mmcows-env" ]]; then
+        log_info "Shared Conda environment 'pfa-mmcows-env' detected. Skipping venv creation ✓"
         return 0
     fi
 
-    # 1. Check if already active
-    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
-        log_info "Already running inside a virtual environment: $VIRTUAL_ENV"
-    else
-        # 2. Check if .venv exists AND is valid
+    # 2. NEW: Detect Kaggle environment
+    if [[ -n "${KAGGLE_KERNEL_RUN_TYPE:-}" ]]; then
+        log_info "Kaggle environment detected. Skipping venv."
+        return 0
+    fi
+
+    # 3. Fallback for local development (Laptop/PC)
+    if [[ -z "${VIRTUAL_ENV:-}" ]]; then
         if [[ -d ".venv" && -f ".venv/bin/activate" ]]; then
             log_info "Found valid .venv directory. Activating..."
             source .venv/bin/activate
         else
-            if [[ -d ".venv" ]]; then
-                log_warn "Existing .venv is broken. Repairing..."
-                rm -rf .venv
-            fi
-
-            log_info "Creating a new virtual environment..."
-            if python3 -m venv .venv; then
-                log_info "Virtual environment created successfully ✓"
-                source .venv/bin/activate
-            else
-                log_warn "Standard venv creation failed. Attempting bootstrap..."
-                if python3 -m venv --without-pip .venv; then
-                    source .venv/bin/activate
-                    log_info "Venv created without pip. Bootstrapping pip..."
-                    curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-                else
-                    log_error "Critical: Could not create virtual environment."
-                    exit 1
-                fi
-            fi
+            log_info "No shared env or .venv found. Proceeding with local .venv creation..."
+            python3 -m venv .venv
+            source .venv/bin/activate
         fi
-    fi
-
-    # 3. Install requirements.txt (This will now only run if NOT on Kaggle)
-    if [[ -f "requirements.txt" ]]; then
-        log_info "Installing dependencies from requirements.txt..."
-        python3 -m pip install --upgrade pip && python3 -m pip install -r requirements.txt
     fi
 }
 
@@ -93,7 +73,9 @@ load_env() {
     
     # Load .env file, ignoring comments and empty lines
     set -a  # Automatically export all variables
-    source <(grep -v '^#' "$env_file" | grep -v '^$' | sed 's/\r$//')
+    source <(grep -v '^#' "$env_file" | grep -v '
+cd /kaggle/input/datasets/haythemkrid/pfa-mmcows && scripts/init.sh
+dvc pull s^$' | sed 's/\r$//')
     set +a
     
     log_debug "Environment variables loaded"
