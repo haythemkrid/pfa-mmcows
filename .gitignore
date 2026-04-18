@@ -23,6 +23,7 @@ store/models/*
 /.dvc/config.local
 /.dvc/tmp
 /.dvc/cache
+/.dvc/config
 
 # Python
 .venv
