@@ -10,7 +10,9 @@
 !store/data/raw/.gitkeep
 !store/data/processed/.gitkeep
 !store/models/.gitkeep
-
+store/data/raw/*
+store/data/processed/*
+store/models/*
 
 # Environment variables - NEVER commit these!
 .env
