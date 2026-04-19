@@ -1,28 +1,49 @@
 stages:
-  # Stage 1: Vision Processing
-  extract_frames:
-    cmd: python src/vision/extract.py
+  visual_build_index:
+    cmd: >
+      python src/visual/data/a1_build_index.py
+      --dataset-root store/data/raw/visual_data
+      --date-folder 0725
+      --cameras cam_1,cam_2,cam_3,cam_4
+      --split-ratios 0.70,0.15,0.15
+      --seed 42
     deps:
-      - src/vision/extract.py
-      - store/data/raw/visual_data/
+      - src/visual/data/a1_build_index.py
+      - store/data/raw/visual_data/images/
+      - store/data/raw/visual_data/labels/
     outs:
-      - store/data/interim/frames/
+      - store/data/raw/visual_data/dataset_index.pkl
+      - store/data/raw/visual_data/dataset_index.csv
 
-  # Stage 2: Sensor Processing
-  clean_sensors:
-    cmd: python src/sensors/parse.py
+  visual_prepare_yolo:
+    cmd: >
+      python src/visual/data/a2_yolo_binary.py
+      --dataset-root store/data/raw/visual_data
     deps:
-      - src/sensors/parse.py
-      - store/data/raw/sensor_logs.csv
+      - src/visual/data/a2_yolo_binary.py
+      - store/data/raw/visual_data/dataset_index.pkl
     outs:
-      - store/data/interim/sensors_cleaned.csv
+      - store/data/raw/visual_data/yolo_nano/train.txt
+      - store/data/raw/visual_data/yolo_nano/val.txt
+      - store/data/raw/visual_data/yolo_nano/test.txt
+      - store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml
 
-  # Stage 3: The Fusion
-  sync_data:
-    cmd: python src/fusion/sync.py
+  visual_train:
+    cmd: >
+      python src/visual/models/train.py
+      --data-yaml store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml
+      --model yolov8n.pt
+      --epochs 50
+      --imgsz 640
+      --batch 16
+      --device cpu
+      --workers 4
+      --project store/models/visual
+      --name cow_detection_v8n
     deps:
-      - src/fusion/sync.py
-      - store/data/interim/frames/
-      - store/data/interim/sensors_cleaned.csv
+      - src/visual/models/train.py
+      - store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml
+      - store/data/raw/visual_data/yolo_nano/train.txt
+      - store/data/raw/visual_data/yolo_nano/val.txt
     outs:
-      - store/data/processed/fused_dataset.pkl
+      - store/models/visual
