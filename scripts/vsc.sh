@@ -24,27 +24,33 @@ fi
 
 # 3. Create the robust start script
 # We use single quotes around 'EOF' to prevent variable expansion during creation
-cat << 'EOF' > "$INSTALL_DIR/start_dev_env"
+cat << 'EOF' > $HOME/.local/bin/start_dev_env
 #!/bin/bash
-# Re-detect user to ensure name is correct
-TUNNEL_NAME="pfa-$(whoami)"
+USER_NAME=$(whoami)
+TUNNEL_NAME="pfa-$USER_NAME"
 
-echo "Starting VS Code Tunnel: $TUNNEL_NAME"
+# Nettoyage plus propre
+pkill -u $USER_NAME -f "code tunnel" 2>/dev/null
+sleep 2 # Laisse le temps au système de libérer les sockets
 
-# Start tunnel in background
-$HOME/.local/bin/code tunnel --name "$TUNNEL_NAME" --accept-server-license-terms &
-TUNNEL_PID=$!
+# Bypass SSL
+export NODE_TLS_REJECT_UNAUTHORIZED=0
 
-# Improved trap: kills the specific PID and ignores errors if already dead
-trap "echo 'Closing Tunnel...'; kill $TUNNEL_PID 2>/dev/null" EXIT
+# On définit le répertoire de données
+DATA_DIR="$HOME/.vscode-server-data"
+mkdir -p "$DATA_DIR"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Tunnel is ACTIVE: https://vscode.dev/tunnel/$TUNNEL_NAME"
-echo "Keep this ZTM terminal open to keep the instance alive."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 Tentative de lancement du tunnel pour $USER_NAME..."
 
-# Wait for the tunnel process
-wait $TUNNEL_PID
+# Ajout d'une boucle de retry en cas de DNS failure
+for i in {1..3}; do
+    $HOME/.local/bin/code tunnel \
+        --name "$TUNNEL_NAME" \
+        --accept-server-license-terms \
+        --server-data-dir "$DATA_DIR" && break || \
+        echo "⚠️ Échec de connexion (tentative $i/3), nouvel essai dans 5s..."
+    sleep 5
+done
 EOF
 
 chmod +x "$INSTALL_DIR/start_dev_env"
