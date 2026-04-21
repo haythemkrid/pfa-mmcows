@@ -16,6 +16,7 @@ from sensor.features.immu import ImmuFeatureSelector
 # Placeholder for mlflow if installed
 try:
     import mlflow
+    import mlflow.sklearn  # <--- ADD THIS LINE HERE
     MLFLOW_AVAILABLE = True
 except ImportError:
     MLFLOW_AVAILABLE = False
@@ -46,7 +47,9 @@ def main():
     
     # MLflow Setup
     if MLFLOW_AVAILABLE and config.get("mlflow", {}).get("enabled", False):
-        mlflow.set_tracking_uri(config["mlflow"].get("tracking_uri", "file:./mlruns"))
+        # Default to the background server running on your shared machine
+        default_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+        mlflow.set_tracking_uri(config["mlflow"].get("tracking_uri", default_uri))
         experiment_name = config["mlflow"].get("experiment_name", "Feature_Selection")
         mlflow.set_experiment(experiment_name)
         active_run = mlflow.start_run(run_name=config.get("modality", "unknown"))
@@ -132,9 +135,12 @@ def main():
             return
 
         # Save score table
-        os.makedirs(config.get("output_dir", "results"), exist_ok=True)
-        score_path = os.path.join(config.get("output_dir", "results"), f"{modality}_score_table.csv")
-        score_df.to_csv(score_path, index=False)
+       # Route CSVs and tables to the metrics folder
+        metric_out_dir = config.get("output_dir", "outputs/sensor/metrics")
+        os.makedirs(metric_out_dir, exist_ok=True)
+
+        score_path = os.path.join(metric_out_dir, f"{modality}_score_table.csv")
+        res_path = os.path.join(metric_out_dir, f"{modality}_evaluation.csv")
         
         if MLFLOW_AVAILABLE and active_run:
             mlflow.log_artifact(score_path)
@@ -156,15 +162,26 @@ def main():
             
             macro_f1 = f1_score(y_test, y_pred, average='macro', zero_division=0)
             macro_acc = accuracy_score(y_test, y_pred)
+
+            acc_dict, prec_dict, recal_dict, f1_dict = cmb_eval(y_pred, y_test)
             
             print(f"  k={k}: Macro F1={macro_f1:.4f}, Accuracy={macro_acc:.4f}")
             results.append({"k": k, "macro_f1": macro_f1, "accuracy": macro_acc})
             
             if MLFLOW_AVAILABLE and active_run:
+                # Log global metrics
                 mlflow.log_metrics({f"f1_k_{k}": macro_f1, f"acc_k_{k}": macro_acc})
-        
-        res_df = pd.DataFrame(results)
-        res_path = os.path.join(config.get("output_dir", "results"), f"{modality}_evaluation.csv")
+                
+                # Log per-class F1 scores
+                for cls, val in f1_dict.items():
+                    mlflow.log_metric(f"f1_class_{cls}_k_{k}", val)
+            
+            if MLFLOW_AVAILABLE and active_run:
+                # This saves the trained Random Forest into the MLflow artifact store
+                mlflow.sklearn.log_model(clf, f"random_forest_model_k_{k}")
+
+        # Re-use the metric_out_dir we defined earlier!
+        res_path = os.path.join(metric_out_dir, f"{modality}_evaluation.csv")
         res_df.to_csv(res_path, index=False)
         
         if MLFLOW_AVAILABLE and active_run:

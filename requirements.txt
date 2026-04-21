@@ -36,3 +36,5 @@ python-dotenv
 pyyaml
 h5py
 requests
+gunicorn
+psycopg2-binary

@@ -1,6 +1,7 @@
 mlruns/
 results/
 __pycache__/
+
 *.pyc
 
 # NEVER commit credentials!
@@ -45,3 +46,10 @@ ENV/
 build/
 dist/
 *.egg-info/
+
+# ========================
+# 3. MLflow & Outputs
+# ========================
+mlruns/
+outputs/
+mlflow.db
