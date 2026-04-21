@@ -247,7 +247,7 @@ def build_engineered_feature_frame(
     y = model_df["behavior"].to_numpy(dtype=int)
     return X_df, y
 
-from .base_selector import FeatureSelectionCascade
+from src.sensor.features.base_selector import FeatureSelectionCascade
 
 class ImmuUwbFeatureSelector(FeatureSelectionCascade):
     pass

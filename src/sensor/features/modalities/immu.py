@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, Tuple
 from tqdm import tqdm
-from .base_selector import FeatureSelectionCascade
+from src.sensor.features.base_selector import FeatureSelectionCascade
 
 try:
     from joblib import Parallel, delayed

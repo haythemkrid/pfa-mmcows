@@ -200,7 +200,7 @@ def build_engineered_feature_frame(
 
     return X_df, y
 
-from .base_selector import FeatureSelectionCascade
+from src.sensor.features.base_selector import FeatureSelectionCascade
 
 class UwbFeatureSelector(FeatureSelectionCascade):
     pass

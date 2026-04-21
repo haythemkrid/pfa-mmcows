@@ -1,8 +1,8 @@
 data:
-  sensor_data_dir: "store/data/raw/"  # Update with your actual path
+  sensor_data_dir: "store/data/raw/sensor_data"  # Update with your actual path
   fold_config: "configs/config_s1.json" # Or whatever your fold config is
   date: "0725"
-  pre_loader: "load_sensor_data"      # Update with your actual loader function name
+  pre_loader: "immu_pre_data_loader"      # Update with your actual loader function name
 
 modality: "immu"
 
@@ -21,3 +21,4 @@ evaluation:
 mlflow:
   enabled: true
   experiment_name: "Sensor_Feature_Selection"
+  tracking_uri: "http://127.0.0.1:5000"
