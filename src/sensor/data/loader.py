@@ -97,6 +97,8 @@ def uwb_pre_data_loader(sensor_data_dir: str, id_list: List[int], date: str) -> 
         
         uwb_file = os.path.join(sensor_data_dir, 'main_data', 'uwb', tag_name, f'{tag_name}_{date}.csv')
         label_file = os.path.join(sensor_data_dir, 'behavior_labels', 'individual', f'{cow_name}_{date}.csv')
+
+
         
         if not (os.path.exists(uwb_file) and os.path.exists(label_file)):
             print(f"Warning: Missing data files for cow {cow_id}. Skipping.")
@@ -118,6 +120,7 @@ def uwb_pre_data_loader(sensor_data_dir: str, id_list: List[int], date: str) -> 
             if all(col in uwb_data.columns for col in cols):
                 pos_cols = cols
                 break
+ 
         
         if pos_cols is None:
             print(f"Warning: Could not infer position columns for cow {cow_id}. Skipping.")

@@ -67,7 +67,8 @@ class ExperimentPipeline(BasePipeline):
                 fold_config=fold_config,
                 date=date,
                 pre_loader_func_name=self.config["data"]["pre_loader"],
-                module_name="src.sensor.data.loader"
+                module_name="src.sensor.data.loader",
+                drop_timestamp=False  # <--- Explicitly set this to False
             )
 
             logger.info(f"Building engineered features for {self.modality}... (This may take a while)")
