@@ -21,4 +21,4 @@ evaluation:
 mlflow:
   enabled: true
   experiment_name: "Sensor_Feature_Selection"
-  tracking_uri: "http://127.0.0.1:5000"
+  tracking_uri: "https://dagshub.com/haythemkrid/pfa-mmcows.mlflow"

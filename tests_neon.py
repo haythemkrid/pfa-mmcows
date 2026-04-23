@@ -1,11 +1,12 @@
 import mlflow
 import os
 
-print("Connecting to MLflow server at http://127.0.0.1:5000...")
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
+print("Connecting to MLflow server at https://dagshub.com/haythemkrid/firstDVC.mlflow...")
+# mlflow.set_tracking_uri("https://dagshub.com/haythemkrid/firstDVC.mlflow")
+
 
 # Create a test experiment
-mlflow.set_experiment("Neon_Database_Test")
+mlflow.set_experiment("Neon_Database_TestV2")
 
 try:
     with mlflow.start_run(run_name="neon_ping"):

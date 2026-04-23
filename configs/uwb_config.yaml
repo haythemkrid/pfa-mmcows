@@ -24,6 +24,7 @@ evaluation:
 
 mlflow:
   enabled: true
-  tracking_uri: "sqlite:///mlflow.db"
+  experiment_name: "Sensor_Feature_Selection"
+  tracking_uri: "https://dagshub.com/haythemkrid/pfa-mmcows.mlflow"
 
 output_dir: "results"

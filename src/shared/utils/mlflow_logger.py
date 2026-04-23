@@ -1,5 +1,7 @@
 import os
 from typing import Dict, Any
+from dotenv import load_dotenv
+load_dotenv()
 
 try:
     import mlflow
@@ -15,12 +17,27 @@ class MLflowLogger:
         self.enabled = MLFLOW_AVAILABLE and config.get("mlflow", {}).get("enabled", False)
         self.config = config
         self.active_run = None
+        load_dotenv()
         
         if self.enabled:
-            default_uri = os.environ.get("MLFLOW_DATABASE_URL", "http://127.0.0.1:5000")
-            mlflow.set_tracking_uri(config["mlflow"].get("tracking_uri", default_uri))
-            experiment_name = config["mlflow"].get("experiment_name", "Feature_Selection")
+            # 1. Grab the URI from the environment, fallback to the config file, or use DagsHub as the absolute default
+            default_uri = os.environ.get(
+                "MLFLOW_TRACKING_URI", 
+                "https://dagshub.com/haythemkrid/firstDVC.mlflow"
+            )
+            
+            # (Optional) A quick sanity check to warn you if you forgot to export your tokens in the terminal!
+            if not os.environ.get("MLFLOW_TRACKING_USERNAME") or not os.environ.get("MLFLOW_TRACKING_PASSWORD"):
+                print("⚠️ WARNING: MLflow username or password environment variables are missing. DagsHub might reject the connection!")
+            
+            # 2. Set the Tracking URI
+            mlflow.set_tracking_uri(config.get("mlflow", {}).get("tracking_uri", default_uri))
+            print(f"MLflow tracking URI set to: {mlflow.get_tracking_uri()}")
+            
+            # 3. Set the Experiment Name
+            experiment_name = config.get("mlflow", {}).get("experiment_name", "Feature_Selection")
             mlflow.set_experiment(experiment_name)
+            print(f"MLflow experiment set to: {experiment_name}")
 
     def start_run(self):
         """Starts an MLflow run and logs configuration parameters."""
@@ -47,5 +64,5 @@ class MLflowLogger:
     
     def log_params(self, params: dict) -> None:
         """Logs a dictionary of parameters to MLflow."""
-        import mlflow
-        mlflow.log_params(params)
+        if self.enabled:
+            mlflow.log_params(params)

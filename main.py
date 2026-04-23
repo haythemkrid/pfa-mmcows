@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from src.shared.utils.config import load_config
 from src.shared.utils.logger import logger
 
+
+
 def main():
     load_dotenv()
     
@@ -23,6 +25,10 @@ def main():
     # Fusion command
     fusion_parser = subparsers.add_parser("fusion", help="Run multi-modal fusion")
     fusion_parser.add_argument("--config", type=str, required=True, help="Path to config file for fusion")
+
+    test_parser = subparsers.add_parser("test", help="Run test experiment")
+    test_parser.add_argument("--config", type=str, required=True, help="Path to config file for test")
+
     
     args = parser.parse_args()
 
@@ -52,6 +58,14 @@ def main():
         # pipeline = FusionPipeline(config)
         # pipeline.run()
         logger.info("Fusion pipeline is not yet implemented.")
+    
+    else:
+        logger.info("Initializing test pipeline...")
+        from src.sensor.pipelines._template_pipeline import TemplatePipeline
+        pipeline = TemplatePipeline(config)
+        pipeline.run()
+        logger.info("Test pipeline is not yet implemented.")
+
 
 if __name__ == "__main__":
     main()

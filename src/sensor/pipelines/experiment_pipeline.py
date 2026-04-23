@@ -111,6 +111,12 @@ class ExperimentPipeline(BasePipeline):
                 logger.info(f"  k={k}: Macro F1={macro_f1:.4f}, Accuracy={macro_acc:.4f}")
                 
                 self.mlflow_logger.log_metrics({f"f1_k_{k}": macro_f1, f"acc_k_{k}": macro_acc})
+
+                # NEW: Log individual class F1 scores
+                class_metrics = {}
+                for cls_name, f1_val in f1_dict.items():
+                    class_metrics[f"class_{cls_name}_f1_k_{k}"] = f1_val
+                self.mlflow_logger.log_metrics(class_metrics)
                 
         finally:
             self.mlflow_logger.end_run()
