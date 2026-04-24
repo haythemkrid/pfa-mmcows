@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 
@@ -44,6 +45,21 @@ def main() -> None:
 
 	project_dir = args.project.resolve()
 	project_dir.mkdir(parents=True, exist_ok=True)
+
+	require_gpu = os.environ.get("REQUIRE_GPU", "0") == "1"
+	if require_gpu and str(args.device).lower() == "cpu":
+		raise RuntimeError(
+			"GPU is required (REQUIRE_GPU=1) but --device=cpu was provided. "
+			"Use --device 0 (or another GPU index)."
+		)
+	if require_gpu:
+		import torch
+		if not torch.cuda.is_available():
+			raise RuntimeError(
+				"GPU is required (REQUIRE_GPU=1) but torch.cuda.is_available() is False. "
+				"This is usually a driver/CUDA runtime mismatch. "
+				"Fix GPU runtime or run with REQUIRE_GPU=0 DEVICE=cpu."
+			)
 
 	model = YOLO(args.model)
 	print(f"[OK] Starting training with model={args.model}, data={data_yaml}")

@@ -147,3 +147,70 @@ def uwb_pre_data_loader(sensor_data_dir: str, id_list: List[int], date: str) -> 
         combined_data_df = pd.concat([combined_data_df, merged_df], ignore_index=True)
     
     return combined_data_df
+
+def immu_uwb_pre_data_loader(sensor_data_dir: str, id_list: List[int], date: str) -> pd.DataFrame:
+    """Load and merge UWB plus formatted IMMU data for hybrid feature selection."""
+    uwb_df = uwb_pre_data_loader(sensor_data_dir, id_list, date)
+    if 'behavior' in uwb_df.columns:
+        uwb_df = uwb_df.drop(columns=['behavior'])
+    
+    immu_df = immu_pre_data_loader(sensor_data_dir, id_list, date)
+    if immu_df.empty or uwb_df.empty:
+        return pd.DataFrame()
+        
+    immu_df = immu_df.rename(columns={
+        c: f"immu_{c}" for c in immu_df.columns if c not in ["timestamp", "behavior"]
+    })
+    
+    uwb_df['timestamp'] = uwb_df['timestamp'].astype(np.float64)
+    immu_df['timestamp'] = immu_df['timestamp'].astype(np.float64)
+    
+    merged_df = pd.merge_asof(
+        uwb_df.sort_values("timestamp"),
+        immu_df.sort_values("timestamp"),
+        on="timestamp",
+        direction="nearest"
+    ).dropna()
+    return merged_df
+
+def uwb_hd_akl_pre_data_loader(sensor_data_dir: str, id_list: List[int], date: str) -> pd.DataFrame:
+    """Load and merge UWB, Head Direction, and Ankle data."""
+    uwb_df = uwb_pre_data_loader(sensor_data_dir, id_list, date)
+    
+    combined_data_df = pd.DataFrame()
+    for cow_id in id_list:
+        cow_name = f'C{cow_id:02d}'
+        tag_name = f'T{cow_id:02d}'
+        
+        ankle_file = os.path.join(sensor_data_dir, 'main_data', 'ankle', cow_name, f'{cow_name}_{date}.csv')
+        head_file = os.path.join(sensor_data_dir, 'sub_data', 'head_direction', tag_name, f'T{cow_id:02d}_{date}.csv')
+        
+        if not (os.path.exists(ankle_file) and os.path.exists(head_file)):
+            continue
+            
+        ankle_df = pd.read_csv(ankle_file)
+        head_df = pd.read_csv(head_file)
+        
+        head_df['timestamp'] = head_df['timestamp'].astype(np.float64)
+        ankle_df['timestamp'] = ankle_df['timestamp'].astype(np.float64)
+        
+        merged_sub = pd.merge_asof(
+            head_df.sort_values("timestamp"),
+            ankle_df.sort_values("timestamp"),
+            on="timestamp",
+            direction="nearest"
+        )
+        combined_data_df = pd.concat([combined_data_df, merged_sub], ignore_index=True)
+    
+    if combined_data_df.empty or uwb_df.empty:
+        return pd.DataFrame()
+        
+    uwb_df['timestamp'] = uwb_df['timestamp'].astype(np.float64)
+    final_df = pd.merge_asof(
+        uwb_df.sort_values("timestamp"),
+        combined_data_df.sort_values("timestamp"),
+        on="timestamp",
+        direction="nearest"
+    ).dropna()
+    
+    return final_df

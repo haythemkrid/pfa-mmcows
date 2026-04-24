@@ -20,18 +20,28 @@ class MLflowLogger:
         load_dotenv()
         
         if self.enabled:
-            # 1. Grab the URI from the environment, fallback to the config file, or use DagsHub as the absolute default
-            default_uri = os.environ.get(
-                "MLFLOW_TRACKING_URI", 
-                "https://dagshub.com/haythemkrid/firstDVC.mlflow"
+            # Resolve tracking URI with a remote-only default.
+            default_uri = "https://dagshub.com/haythemkrid/pfa-mmcows.mlflow"
+            tracking_uri = (
+                config.get("mlflow", {}).get("tracking_uri")
+                or os.environ.get("MLFLOW_TRACKING_URI")
+                or default_uri
             )
+
+            # Guard against local MLflow stores; this project uses remote tracking only.
+            local_markers = ("file:", "sqlite:", "runs/mlflow", "./mlruns", "mlruns")
+            if str(tracking_uri).startswith(local_markers) or str(tracking_uri).startswith("/"):
+                raise ValueError(
+                    "Local MLflow tracking URI is not allowed in this project. "
+                    "Use your remote tracking URI (e.g. DagsHub)."
+                )
             
             # (Optional) A quick sanity check to warn you if you forgot to export your tokens in the terminal!
             if not os.environ.get("MLFLOW_TRACKING_USERNAME") or not os.environ.get("MLFLOW_TRACKING_PASSWORD"):
                 print("⚠️ WARNING: MLflow username or password environment variables are missing. DagsHub might reject the connection!")
             
             # 2. Set the Tracking URI
-            mlflow.set_tracking_uri(config.get("mlflow", {}).get("tracking_uri", default_uri))
+            mlflow.set_tracking_uri(tracking_uri)
             print(f"MLflow tracking URI set to: {mlflow.get_tracking_uri()}")
             
             # 3. Set the Experiment Name

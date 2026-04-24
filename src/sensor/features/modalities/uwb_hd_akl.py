@@ -402,7 +402,7 @@ def build_engineered_feature_frame(
     ]
 
     model_df = feat_df[["behavior"] + feature_cols].replace([np.inf, -np.inf], np.nan)
-    model_df = model_df.dropna().reset_index(drop=True)
+    model_df = model_df.bfill().ffill().fillna(0).reset_index(drop=True)
 
     if model_df.empty:
         return pd.DataFrame(), np.array([], dtype=int)

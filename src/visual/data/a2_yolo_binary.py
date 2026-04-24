@@ -7,6 +7,7 @@ It always writes train/val/test text files and a dataset YAML.
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -83,6 +84,50 @@ def write_split_txts(df: pd.DataFrame, out_dir: Path, dry_run: bool) -> None:
             print(f"[OK] Wrote {len(lines)} lines to {output_path}")
 
 
+def ensure_yolo_label_layout(df: pd.DataFrame, dataset_root: Path, dry_run: bool) -> None:
+    images_root = dataset_root / "images"
+    linked = 0
+    copied = 0
+    missing = 0
+
+    for row in df.itertuples(index=False):
+        img_path = Path(row.img_path)
+        src_lbl = Path(row.lbl_path)
+
+        try:
+            rel_img = img_path.relative_to(images_root)
+        except ValueError:
+            continue
+
+        dst_lbl = (dataset_root / "labels" / rel_img).with_suffix(".txt")
+        if dst_lbl.exists():
+            continue
+
+        if dry_run:
+            continue
+
+        dst_lbl.parent.mkdir(parents=True, exist_ok=True)
+        if not src_lbl.exists():
+            dst_lbl.write_text("", encoding="utf-8")
+            missing += 1
+            continue
+
+        try:
+            dst_lbl.symlink_to(src_lbl)
+            linked += 1
+        except OSError:
+            shutil.copy2(src_lbl, dst_lbl)
+            copied += 1
+
+    if dry_run:
+        print("[DRY] Would ensure YOLO label layout under labels/<date>/<cam>/")
+    else:
+        print(
+            "[OK] Label layout ready: "
+            f"linked={linked}, copied={copied}, empty_created={missing}"
+        )
+
+
 def write_yaml(out_dir: Path, dataset_root: Path, df: pd.DataFrame, dry_run: bool) -> None:
     yaml_path = out_dir / "mmcows_binary.yaml"
     content = "\n".join(
@@ -125,6 +170,8 @@ def main() -> None:
     df = pd.read_pickle(index_file)
     print(f"[OK] Loaded {len(df)} samples from {index_file}")
 
+    ensure_yolo_label_layout(df, dataset_root=dataset_root, dry_run=args.dry_run)
+
     if args.remap_labels_in_place:
         skipped = 0
         changed_files = 0
@@ -143,177 +190,6 @@ def main() -> None:
 
     write_split_txts(df, out_dir=output_dir, dry_run=args.dry_run)
     write_yaml(out_dir=output_dir, dataset_root=dataset_root, df=df, dry_run=args.dry_run)
-
-
-if __name__ == "__main__":
-    main()
-"""
-A2 — Convert to YOLO binary format
-====================================
-Reads dataset_index.pkl produced by A1.
-For every label file, remaps ALL class IDs → 0  (binary: cow vs background).
-Rewrites label files IN-PLACE (no copies — storage-safe).
-Writes train.txt / val.txt / test.txt and mmcows_binary.yaml
-under  <DATASET_ROOT>/yolo_nano/.
-
-Steps
------
-1. Load dataset_index.pkl
-2. For each row, read the .txt label line-by-line
-   - YOLO line format: <class_id> <cx> <cy> <w> <h>
-   - Replace class_id with 0, keep bbox unchanged
-3. Write back to the same lbl_path (in-place, no copy)
-4. Write yolo_nano/train.txt, val.txt, test.txt
-   (one absolute image path per line)
-5. Write yolo_nano/mmcows_binary.yaml
-
-Safety
-------
-- A dry-run mode (DRY_RUN = True) prints diffs without writing anything.
-- Labels that are already all-zero are skipped (idempotent).
-- Empty label files (background tiles) are left untouched.
-"""
-
-from pathlib import Path
-import pandas as pd
-
-# ── Configuration ─────────────────────────────────────────────────────────────
-DATASET_ROOT = Path(r"C:\Users\DELL\Desktop\test\mmcows\data\raw\visual_data")          # ← same root as A1
-INDEX_FILE   = DATASET_ROOT / "dataset_index.pkl"
-OUT_DIR      = DATASET_ROOT / "yolo_nano"
-DRY_RUN      = False          # set True to preview without writing anything
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-# def remap_label_file(lbl_path: Path, dry_run: bool = False) -> dict:
-#     """
-#     Read a YOLO .txt label, remap all class IDs → 0, write back in-place.
-#     Returns a stats dict: {skipped, remapped, lines}.
-#     """
-#     text = lbl_path.read_text().strip()
-
-#     if not text:                       # background tile — nothing to remap
-#         return {"skipped": True, "remapped": 0, "lines": 0}
-
-#     lines     = text.splitlines()
-#     new_lines = []
-#     remapped  = 0
-
-#     for line in lines:
-#         parts = line.strip().split()
-#         if not parts:
-#             continue
-#         cls_id = int(parts[0])
-#         if cls_id != 0:
-#             parts[0] = "0"
-#             remapped += 1
-#         new_lines.append(" ".join(parts))
-
-#     already_binary = (remapped == 0)
-#     if already_binary:
-#         return {"skipped": True, "remapped": 0, "lines": len(new_lines)}
-
-#     if not dry_run:
-#         lbl_path.write_text("\n".join(new_lines) + "\n")
-
-#     return {"skipped": False, "remapped": remapped, "lines": len(new_lines)}
-
-
-def write_split_txts(df: pd.DataFrame, out_dir: Path, dry_run: bool) -> None:
-    for split in ["train", "val", "test"]:
-        subset = df[df["split"] == split]
-        lines  = [str(p) + "\n" for p in subset["img_path"]]
-        path   = out_dir / f"{split}.txt"
-        if dry_run:
-            print(f"  [DRY] Would write {len(lines)} lines → {path}" )
-        else:
-            path.write_text("".join(lines))
-            print(f"  Wrote {len(lines):>5} lines → {path}")
-
-
-def write_yaml(out_dir: Path, df: pd.DataFrame, dry_run: bool) -> None:
-    yaml_path = out_dir / "mmcows_binary.yaml"
-    content = f"""\
-# mmcows_binary.yaml — generated by A2
-# Binary detection: all cow IDs collapsed to class 0
-
-path  : {DATASET_ROOT.resolve()}
-train : {(out_dir / 'train.txt').resolve()}
-val   : {(out_dir / 'val.txt').resolve()}
-test  : {(out_dir / 'test.txt').resolve()}
-
-nc     : 1
-names  : ['cow']
-
-# Dataset stats
-# Total samples : {len(df)}
-# Train         : {len(df[df['split'] == 'train'])}
-# Val           : {len(df[df['split'] == 'val'])}
-# Test          : {len(df[df['split'] == 'test'])}
-# Cameras       : {sorted(df['cam'].unique().tolist())}
-"""
-    if dry_run:
-        print(f"\n[DRY] Would write yaml → {yaml_path}")
-        print(content)
-    else:
-        yaml_path.write_text(content)
-        print(f"  Wrote yaml  → {yaml_path}")
-
-
-def main() -> None:
-    # ── Load index ────────────────────────────────────────────────────────
-    if not INDEX_FILE.exists():
-        print(f"[ERROR] Index not found: {INDEX_FILE}")
-        print("        Run a1_build_index.py first.")
-        return
-
-    df = pd.read_pickle(INDEX_FILE)
-    print(f"Loaded index: {len(df)} samples across {df['cam'].nunique()} cameras.\n")
-
-    if DRY_RUN:
-        print("*** DRY RUN — no files will be modified ***\n")
-
-    # ── Remap labels in-place ─────────────────────────────────────────────
-    # print("Remapping class IDs → 0 in label files ...")
-    # total_remapped = 0
-    # total_skipped  = 0
-    # total_files    = 0
-
-    # for _, row in df.iterrows():
-    #     lbl_path = Path(row["lbl_path"])
-    #     stats    = remap_label_file(lbl_path, dry_run=DRY_RUN)
-    #     total_files += 1
-    #     if stats["skipped"]:
-    #         total_skipped += 1
-    #     else:
-    #         total_remapped += 1
-
-    # print(f"  Files processed : {total_files}")
-    # print(f"  Already binary  : {total_skipped}  (skipped, no write needed)")
-    # print(f"  Remapped        : {total_remapped}  (written in-place)\n")
-
-    # ── Write split txts ──────────────────────────────────────────────────
-    print("Writing split .txt files ...")
-    if not DRY_RUN:
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-    write_split_txts(df, OUT_DIR, dry_run=DRY_RUN)
-
-    # ── Write yaml ────────────────────────────────────────────────────────
-    print("\nWriting mmcows_binary.yaml ...")
-    write_yaml(OUT_DIR, df, dry_run=DRY_RUN)
-
-    # ── Verify label sample ───────────────────────────────────────────────
-    if not DRY_RUN:
-        print("\nSpot-check — first 3 label files after remap:")
-        for _, row in df.head(3).iterrows():
-            lbl_path = Path(row["lbl_path"])
-            content  = lbl_path.read_text().strip()
-            classes  = {int(l.split()[0]) for l in content.splitlines() if l.strip()}
-            print(f"  {row['sample_id']}: classes={classes}  ({'OK' if classes <= {0} else 'WARN — non-zero class found!'})")
-
-    print("\nA2 complete.")
-    if not DRY_RUN:
-        print(f"  Split files + yaml → {OUT_DIR}/")
 
 
 if __name__ == "__main__":
