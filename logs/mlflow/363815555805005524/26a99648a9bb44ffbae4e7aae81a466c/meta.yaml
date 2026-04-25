@@ -1,0 +1,14 @@
+artifact_uri: /home/iheb/pfa-mmcows/logs/mlflow/363815555805005524/26a99648a9bb44ffbae4e7aae81a466c/artifacts
+end_time: 1777104154683
+entry_point_name: ''
+experiment_id: '363815555805005524'
+lifecycle_stage: active
+run_id: 26a99648a9bb44ffbae4e7aae81a466c
+run_name: '20260425_084038'
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1777102839153
+status: 3
+tags: []
+user_id: iheb

@@ -1,0 +1,101 @@
+experiment:
+  name: mbt_uwb_rgb
+  run_name: null
+  notes: MBT baseline — UWB + RGB sensor streams
+data:
+  sensor_data_dir: store/data/raw/sensor_data
+  visual_data_dir: store/data/raw/visual_data
+  config_s1_path: configs/config_s1.json
+  config_s2_path: configs/config_s2.json
+  annotated_date: '0725'
+  sensor_cow_ids:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  all_cow_ids:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  uwb_feature_cols:
+  - coord_x_cm
+  - coord_y_cm
+  - coord_z_cm
+  hd_feature_cols:
+  - roll
+  - pitch
+  - yaw
+  uwb_source_rate_hz: 0.0667
+  target_rate_hz: 2.0
+  window_size_s: 15
+  overlap: 0.5
+  image_size: 224
+  cameras:
+  - 1
+  - 2
+  - 3
+  - 4
+  frames_per_clip: 8
+  split_type: s1
+  num_folds: 5
+  cache_images: true
+  cache_resize_to: 256
+  num_workers: 8
+  pin_memory: true
+model:
+  embed_dim: 256
+  num_heads: 8
+  num_layers_unimodal: 3
+  num_layers_fusion: 3
+  num_bottleneck_tokens: 4
+  ffn_dim: 512
+  dropout: 0.1
+  num_classes: 7
+  sensor_input_dim: 3
+  sensor_cnn_channels:
+  - 64
+  - 128
+  - 256
+  sensor_cnn_kernel: 3
+  visual_backbone: vit_small_patch16_224
+  visual_pretrained: true
+  visual_freeze_layers: 8
+  pos_encoding: fourier
+training:
+  epochs: 60
+  batch_size: 32
+  lr: 0.0001
+  weight_decay: 0.0001
+  warmup_epochs: 5
+  grad_clip: 1.0
+  label_smoothing: 0.1
+  mixed_precision: true
+  optimizer: adamw
+  scheduler: cosine
+  early_stop_patience: 12
+  early_stop_min_delta: 0.001
+output:
+  run_dir: logs/mbt_runs
+  save_top_k: 1
+  log_every_n_steps: 10
+  use_mlflow: true
+  mlflow_tracking_uri: sqlite:///logs/mlflow/mlflow.db
