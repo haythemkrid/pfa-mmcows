@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"import pandas as pd; import numpy as np; import sys; sys\\.path\\.append\\('\\.'\\); from src\\.sensor\\.data\\.loader import immu_uwb_pre_data_loader; df = immu_uwb_pre_data_loader\\('store/data/raw/sensor_data', \\[1, 2\\], '0725'\\); print\\('Columns:', df\\.columns\\.tolist\\(\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

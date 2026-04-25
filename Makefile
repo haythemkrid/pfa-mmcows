@@ -1,4 +1,22 @@
-.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline
+.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline check-gpu
+
+# Visual pipeline defaults (override at runtime, e.g. make visual-train EPOCHS=10 DEVICE=0)
+DATASET_ROOT ?= store/data/raw/visual_data
+DATE_FOLDER ?= 0725
+CAMERAS ?= cam_1,cam_2,cam_3,cam_4
+SPLIT_RATIOS ?= 0.70,0.15,0.15
+SEED ?= 42
+MODEL ?= yolov8n.pt
+EPOCHS ?= 100
+IMGSZ ?= 640
+BATCH ?= 16
+DEVICE ?= 0
+WORKERS ?= 4
+RUN_NAME ?= cow_detection_v8n
+VISUAL_EXPERIMENT_NAME ?= Visual_Training
+REQUIRE_GPU ?= 1
+DATA_YAML ?= $(DATASET_ROOT)/yolo_nano/mmcows_binary.yaml
+VISUAL_PROJECT ?= store/models/visual
 
 # Default command when you just type 'make'
 help:
@@ -10,6 +28,12 @@ help:
 	@echo "  make visual-yolo     - Generate YOLO train/val/test + yaml"
 	@echo "  make visual-train    - Train YOLOv8 model"
 	@echo "  make visual-pipeline - Run visual index -> yolo -> train"
+	@echo "  Example overrides:"
+	@echo "    make visual-train EPOCHS=10 DEVICE=0 RUN_NAME=exp_gpu"
+	@echo "    make visual-index DATE_FOLDER=0726 CAMERAS=cam_1,cam_3"
+	@echo "    make visual-pipeline MODEL=yolov8s.pt BATCH=8 WORKERS=2 VISUAL_EXPERIMENT_NAME=Visual_Exp"
+	@echo "    make visual-pipeline DEVICE=0 REQUIRE_GPU=1"
+	@echo "    make visual-pipeline DEVICE=cpu REQUIRE_GPU=0"
 	@echo "  make ui        - Start the MLflow UI on port 5000"
 	@echo "  make clean     - Remove caches and temporary files"
 
@@ -28,20 +52,36 @@ repro:
 	dvc repro
 
 visual-index:
-	python src/visual/data/a1_build_index.py --dataset-root store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+	python -m src.visual.data.a1_build_index --dataset-root $(DATASET_ROOT) --date-folder $(DATE_FOLDER) --cameras $(CAMERAS) --split-ratios $(SPLIT_RATIOS) --seed $(SEED)
 
 visual-yolo:
-	python src/visual/data/a2_yolo_binary.py --dataset-root store/data/raw/visual_data
+	python -m src.visual.data.a2_yolo_binary --dataset-root $(DATASET_ROOT) --remap-labels-in-place
 
-visual-train:
-	python src/visual/models/train.py --data-yaml store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 16 --device cpu --workers 4 --project store/models/visual --name cow_detection_v8n
+check-gpu:
+	@if [ "$(REQUIRE_GPU)" = "1" ]; then \
+		if ! command -v nvidia-smi >/dev/null 2>&1; then \
+			echo "[ERROR] GPU required but nvidia-smi not found. Set REQUIRE_GPU=0 to bypass."; \
+			exit 1; \
+		fi; \
+		echo "[OK] NVIDIA GPU detected by nvidia-smi."; \
+		python -c "import torch, sys; sys.exit(0 if torch.cuda.is_available() else 1)" >/dev/null 2>&1 || { \
+			echo "[ERROR] GPU required but torch.cuda.is_available() is False."; \
+			echo "        nvidia-smi may work while PyTorch CUDA is unusable (often driver/runtime mismatch)."; \
+			echo "        Fix NVIDIA driver/CUDA stack, or run with REQUIRE_GPU=0 DEVICE=cpu."; \
+			exit 1; \
+		}; \
+		echo "[OK] PyTorch CUDA is available."; \
+	fi
 
-visual-pipeline:
-	python src/visual/pipelines/training_pipeline.py --dataset-root store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42 --model yolov8n.pt --epochs 50 --imgsz 640 --batch 16 --device cpu --workers 4 --run-name cow_detection_v8n
+visual-train: check-gpu
+	python -m src.visual.models.train --data-yaml $(DATA_YAML) --model $(MODEL) --epochs $(EPOCHS) --imgsz $(IMGSZ) --batch $(BATCH) --device $(DEVICE) --workers $(WORKERS) --project $(VISUAL_PROJECT) --name $(RUN_NAME)
+
+visual-pipeline: check-gpu
+	python -m src.visual.pipelines.training_pipeline --dataset-root $(DATASET_ROOT) --date-folder $(DATE_FOLDER) --cameras $(CAMERAS) --split-ratios $(SPLIT_RATIOS) --seed $(SEED) --model $(MODEL) --epochs $(EPOCHS) --imgsz $(IMGSZ) --batch $(BATCH) --device $(DEVICE) --workers $(WORKERS) --run-name $(RUN_NAME) --experiment-name $(VISUAL_EXPERIMENT_NAME)
 
 # Launch MLflow to see experiment results
 ui:
-	mlflow ui --host 0.0.0.0 --port 5000
+	bash scripts/mlflow.sh
 
 # Cleanup
 clean:

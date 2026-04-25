@@ -1,0 +1,1 @@
+{'embed_dim': 256, 'num_heads': 8, 'num_layers_unimodal': 3, 'num_layers_fusion': 3, 'num_bottleneck_tokens': 4, 'ffn_dim': 512, 'dropout': 0.1, 'num_classes': 7, 'sensor_input_dim': 3, 'sensor_cnn_channels': [64, 128, 256], 'sensor_cnn_kernel': 3, 'visual_backbone': 'vit_small_patch16_224', 'visual_pretrained': True, 'visual_freeze_layers': 8, 'pos_encoding': 'fourier'}

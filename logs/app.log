@@ -183,3 +183,72 @@
 2026-04-23 14:19:53 [INFO] mmcows -   k=50: Macro F1=0.6127, Accuracy=0.7623
 2026-04-23 14:19:54 [INFO] mmcows -   k=100: Macro F1=0.6138, Accuracy=0.7644
 2026-04-23 14:19:56 [INFO] mmcows -   k=all: Macro F1=0.6183, Accuracy=0.7639
+2026-04-23 16:03:14 [INFO] mmcows - Loaded config from configs/immu_uwb_config.yaml
+2026-04-23 16:03:14 [INFO] mmcows - Initializing Sensor ExperimentPipeline...
+2026-04-23 16:03:27 [INFO] mmcows - Logging initial experiment parameters to MLflow...
+2026-04-23 16:03:27 [INFO] mmcows - Loading data for sensor...
+2026-04-23 16:03:30 [INFO] mmcows - Building engineered features for immu_uwb... (This may take a while)
+2026-04-23 16:03:43 [INFO] mmcows - Running feature selection cascade...
+2026-04-23 16:36:48 [INFO] mmcows - Loaded config from configs/immu_uwb_config.yaml
+2026-04-23 16:36:48 [INFO] mmcows - Initializing Sensor ExperimentPipeline...
+2026-04-23 16:36:51 [INFO] mmcows - Logging initial experiment parameters to MLflow...
+2026-04-23 16:36:51 [INFO] mmcows - Loading data for sensor...
+2026-04-23 16:36:54 [INFO] mmcows - Building engineered features for immu_uwb... (This may take a while)
+2026-04-23 16:37:07 [INFO] mmcows - Running feature selection cascade...
+2026-04-23 16:37:08 [INFO] mmcows - Evaluating top k features: [20, 50, 100, 'all']
+2026-04-23 16:37:08 [INFO] mmcows -   k=20: Macro F1=0.4535, Accuracy=0.6611
+2026-04-23 16:37:09 [INFO] mmcows -   k=50: Macro F1=0.3930, Accuracy=0.6151
+2026-04-23 16:37:10 [INFO] mmcows -   k=100: Macro F1=0.3930, Accuracy=0.6151
+2026-04-23 16:37:11 [INFO] mmcows -   k=all: Macro F1=0.3984, Accuracy=0.6275
+2026-04-23 16:37:28 [INFO] mmcows - Loaded config from configs/uwb_hd_akl_config.yaml
+2026-04-23 16:37:28 [INFO] mmcows - Initializing Sensor ExperimentPipeline...
+2026-04-23 16:37:31 [INFO] mmcows - Logging initial experiment parameters to MLflow...
+2026-04-23 16:37:31 [INFO] mmcows - Loading data for sensor...
+2026-04-23 16:37:33 [INFO] mmcows - Building engineered features for uwb_hd_akl... (This may take a while)
+2026-04-23 16:37:56 [INFO] mmcows - Running feature selection cascade...
+2026-04-23 16:37:57 [INFO] mmcows - Evaluating top k features: [20, 50, 100, 'all']
+2026-04-23 16:37:58 [INFO] mmcows -   k=20: Macro F1=0.4634, Accuracy=0.6349
+2026-04-23 16:37:59 [INFO] mmcows -   k=50: Macro F1=0.5120, Accuracy=0.7111
+2026-04-23 16:38:00 [INFO] mmcows -   k=100: Macro F1=0.5034, Accuracy=0.7120
+2026-04-23 16:38:01 [INFO] mmcows -   k=all: Macro F1=0.5077, Accuracy=0.7146
+2026-04-23 16:55:55 [INFO] mmcows - Loaded config from configs/immu_uwb_config.yaml
+2026-04-23 16:55:55 [INFO] mmcows - Initializing Sensor ExperimentPipeline...
+2026-04-23 16:55:57 [INFO] mmcows - Logging initial experiment parameters to MLflow...
+2026-04-23 16:55:57 [INFO] mmcows - Loading data for sensor...
+2026-04-23 16:56:00 [INFO] mmcows - Building engineered features for immu_uwb... (This may take a while)
+2026-04-23 16:56:13 [INFO] mmcows - Running feature selection cascade...
+2026-04-23 16:56:15 [INFO] mmcows - Evaluating top k features: [20, 50, 100, 'all']
+2026-04-23 16:56:15 [INFO] mmcows -   k=20: Macro F1=0.4535, Accuracy=0.6611
+2026-04-23 16:56:16 [INFO] mmcows -   k=50: Macro F1=0.3930, Accuracy=0.6151
+2026-04-23 16:56:17 [INFO] mmcows -   k=100: Macro F1=0.3930, Accuracy=0.6151
+2026-04-23 16:56:18 [INFO] mmcows -   k=all: Macro F1=0.3984, Accuracy=0.6275
+2026-04-23 17:07:22 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 17:07:50 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 17:07:52 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data
+2026-04-23 17:07:52 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 1 --imgsz 640 --batch 16 --device cpu --workers 4 --project store/models/visual --name cow_detection_smoke
+2026-04-23 17:09:17 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 17:09:17 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data
+2026-04-23 17:09:18 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 1 --imgsz 640 --batch 16 --device cpu --workers 4 --project store/models/visual --name cow_detection_smoke
+2026-04-23 20:38:38 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 20:38:38 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 20:38:40 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 16 --device cpu --workers 4 --project store/models/visual --name cow_detection_v8n
+2026-04-23 22:10:28 [INFO] mmcows - Running Visual Training Pipeline...
+2026-04-23 22:10:28 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 22:10:29 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 22:10:31 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 16 --device 0 --workers 4 --project store/models/visual --name cow_detection_v8n
+2026-04-23 22:59:46 [INFO] mmcows - Running Visual Training Pipeline...
+2026-04-23 22:59:46 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 22:59:53 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 22:59:55 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 16 --device 0 --workers 4 --project store/models/visual --name cow_detection_v8n
+2026-04-23 23:15:25 [INFO] mmcows - Running Visual Training Pipeline...
+2026-04-23 23:15:25 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 23:15:25 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 23:15:28 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 100 --imgsz 640 --batch 16 --device 0 --workers 4 --project store/models/visual --name cow_detection_v8n
+2026-04-23 23:42:07 [INFO] mmcows - Running Visual Training Pipeline...
+2026-04-23 23:42:07 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 23:42:08 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 23:42:10 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 64 --device 0 --workers 4 --project store/models/visual --name cow_detection_v8n
+2026-04-23 23:45:09 [INFO] mmcows - Running Visual Training Pipeline...
+2026-04-23 23:45:09 [INFO] mmcows - [visual_build_index] Running: /opt/miniconda3/bin/python -m src.visual.data.a1_build_index --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --date-folder 0725 --cameras cam_1,cam_2,cam_3,cam_4 --split-ratios 0.70,0.15,0.15 --seed 42
+2026-04-23 23:45:10 [INFO] mmcows - [visual_prepare_yolo] Running: /opt/miniconda3/bin/python -m src.visual.data.a2_yolo_binary --dataset-root /home/haythem/pfa-mmcows/store/data/raw/visual_data --remap-labels-in-place
+2026-04-23 23:45:11 [INFO] mmcows - [visual_train] Running: /opt/miniconda3/bin/python -m src.visual.models.train --data-yaml /home/haythem/pfa-mmcows/store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml --model yolov8n.pt --epochs 50 --imgsz 640 --batch 64 --device 0 --workers 4 --project store/models/visual --name cow_detection_v8n

@@ -1,0 +1,99 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Multimodal Bottleneck Transformer — default configuration
+# All training runs read exclusively from this file.
+# Override any key on the command line:
+#   python -m src.multimodal.pipelines.training_pipeline \
+#          training.lr=3e-4 model.num_bottleneck_tokens=8
+# ─────────────────────────────────────────────────────────────────────────────
+
+experiment:
+  name: mbt_uwb_rgb           # used as the MLflow experiment name
+  run_name: null              # null → auto-generated from timestamp
+  notes: "MBT baseline — UWB + RGB sensor streams"
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+data:
+  sensor_data_dir:  store/data/raw/sensor_data
+  visual_data_dir:  store/data/raw/visual_data
+  config_s1_path:   configs/config_s1.json
+  config_s2_path:   configs/config_s2.json
+  annotated_date:   "0725"
+  sensor_cow_ids:   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  all_cow_ids:      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+
+  # Sensor stream
+  uwb_feature_cols: [coord_x_cm, coord_y_cm, coord_z_cm]
+  hd_feature_cols:  [roll, pitch, yaw]
+  uwb_source_rate_hz:  0.0667   # 1/15
+  target_rate_hz:      2.0
+  window_size_s:       15
+  overlap:             0.50
+
+  # Visual stream
+  image_size:       224         # pixels (square crop)
+  cameras:          [1, 2, 3, 4]
+  frames_per_clip:  8           # number of UWB-synced frames sampled per window
+
+  # Split
+  split_type:  s1              # "s1" (object-wise) | "s2" (temporal)
+  num_folds:   5
+
+  # Image cache: decode all frames into RAM once before training starts.
+  # Eliminates all disk I/O from the training loop → GPU goes from ~19%
+  # to ~80-90% utilisation.  Costs ~1-2 GB RAM for 5760 frames at 256px.
+  # Set false only if host RAM < 4 GB.
+  cache_images:      true
+  cache_resize_to:   256     # resize shorter edge before caching
+
+  num_workers: 8
+  pin_memory:  true
+
+# ── Model ─────────────────────────────────────────────────────────────────────
+model:
+  embed_dim:              256
+  num_heads:              8
+  num_layers_unimodal:    3    # independent layers before bottleneck fusion
+  num_layers_fusion:      3    # fusion layers (each with bottleneck interaction)
+  num_bottleneck_tokens:  4    # K  (K << T_V, T_S)
+  ffn_dim:                512  # feed-forward inner dimension
+  dropout:                0.1
+  num_classes:            7    # behaviours 1-7
+
+  # Sensor encoder
+  sensor_input_dim:       3    # number of feature channels (UWB xyz)
+  sensor_cnn_channels:    [64, 128, 256]
+  sensor_cnn_kernel:      3
+
+  # Visual encoder
+  visual_backbone:        vit_small_patch16_224   # timm model name
+  visual_pretrained:      true
+  visual_freeze_layers:   8    # freeze first N ViT blocks
+
+  # Positional encoding
+  pos_encoding:           fourier   # "fourier" | "learned"
+
+# ── Training ──────────────────────────────────────────────────────────────────
+training:
+  epochs:           60
+  batch_size:       32
+  lr:               1e-4
+  weight_decay:     1e-4
+  warmup_epochs:    5
+  grad_clip:        1.0
+  label_smoothing:  0.1
+  mixed_precision:  true      # torch.cuda.amp
+
+  optimizer:        adamw     # "adamw" | "adam" | "sgd"
+  scheduler:        cosine    # "cosine" | "step" | "plateau"
+
+  # Early stopping
+  early_stop_patience:  12   # epochs without val-F1 improvement
+  early_stop_min_delta: 0.001
+
+# ── Checkpointing & logging ───────────────────────────────────────────────────
+output:
+  run_dir:          logs/mbt_runs    # all run artefacts land here
+  save_top_k:       1               # keep the best-F1 checkpoint per fold
+  log_every_n_steps: 10
+  use_mlflow:       true
+  mlflow_tracking_uri: sqlite:///logs/mlflow/mlflow.db

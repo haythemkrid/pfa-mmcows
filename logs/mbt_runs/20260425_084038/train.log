@@ -1,0 +1,6 @@
+{"time": "2026-04-25T08:40:38", "event": "start", "run_dir": "logs/mbt_runs/20260425_084038", "run_name": "20260425_084038", "device": "cuda"}
+{"time": "2026-04-25T08:40:39", "event": "folds", "folds": ["fold_1", "fold_2", "fold_3", "fold_4", "fold_5"], "split_type": "s1"}
+{"time": "2026-04-25T08:40:39", "event": "data_load", "stage": "sensor_start"}
+{"time": "2026-04-25T08:40:40", "event": "data_load", "stage": "sensor_done", "windows": 94923, "shape": [94923, 30, 3]}
+{"time": "2026-04-25T08:40:40", "event": "fold_start", "fold": "fold_1"}
+{"time": "2026-04-25T08:40:40", "event": "fold_sizes", "fold": "fold_1", "train": 56965, "val": 18980}
