@@ -56,3 +56,4 @@ mlflow.dblogs/
 
 runs/
 logs/
+logs/*
