@@ -1,0 +1,5 @@
+{"time": "2026-04-25T13:49:02", "event": "start", "run_dir": "logs/mbt_runs/smoke_test", "run_name": "smoke_test", "device": "cuda"}
+{"time": "2026-04-25T13:49:02", "event": "folds", "folds": ["fold_1", "fold_2", "fold_3", "fold_4", "fold_5"], "split_type": "s1"}
+{"time": "2026-04-25T13:49:02", "event": "data_load", "stage": "sensor_start"}
+{"time": "2026-04-25T13:49:04", "event": "data_load", "stage": "sensor_done", "windows": 94923, "shape": [94923, 30, 3]}
+{"time": "2026-04-25T13:49:05", "event": "image_cache", "stage": "start"}

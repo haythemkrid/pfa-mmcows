@@ -96,4 +96,4 @@ output:
   save_top_k:       1               # keep the best-F1 checkpoint per fold
   log_every_n_steps: 10
   use_mlflow:       true
-  mlflow_tracking_uri: sqlite:///logs/mlflow/mlflow.db
+  mlflow_tracking_uri: "https://dagshub.com/haythemkrid/pfa-mmcows.mlflow"

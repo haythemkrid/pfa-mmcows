@@ -41,7 +41,6 @@ _install()
 
 import gc
 import json
-import logging
 import time
 from pathlib import Path
 
@@ -62,10 +61,9 @@ from src.sensor.data.loaders   import UWBLoader
 from src.sensor.data.splits    import SplitConfig
 from src.sensor.data.sync      import resample_to_target
 from src.sensor.data.windowing import make_windows
+from src.shared.utils.logger import logger
 from src.multimodal.data.dataset import FrameIndex, ImageCache, MBTDataset
 from src.multimodal.models.mbt   import MultimodalBottleneckTransformer
-
-logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
