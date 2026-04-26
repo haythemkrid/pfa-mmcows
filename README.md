@@ -238,3 +238,91 @@ python -m src.multimodal.pipelines.training_pipeline \
     model.visual_pretrained=false \
     experiment.run_name=smoke_test
 ```
+
+---
+
+## 10. Run multiple MBT experiments from one command
+
+You can now orchestrate single or batch multimodal runs through `main.py`
+and Make targets.
+
+### Single experiment
+
+With `main.py`:
+
+```bash
+python main.py multimodal \
+    --run-name mbt_single \
+    --overrides training.epochs=2 output.use_mlflow=false
+```
+
+With Make:
+
+```bash
+make mbt-run \
+    MBT_RUN_NAME=mbt_single \
+    MBT_OVERRIDES="training.epochs=2 output.use_mlflow=false"
+```
+
+### Batch experiments (comma-separated run names)
+
+With `main.py`:
+
+```bash
+python main.py multimodal-batch \
+    --experiments mbt_baseline,mbt_s2,mbt_lr3e4 \
+    --base-overrides training.epochs=5 output.use_mlflow=true
+```
+
+With Make:
+
+```bash
+make mbt-multi \
+    MBT_BASE_OVERRIDES="training.epochs=5 output.use_mlflow=true"
+```
+
+By default, `make mbt-multi` loads experiments from
+`configs/mbt_experiments.yaml`.
+
+If you want comma-separated names instead, clear `MBT_EXPERIMENTS_FILE`:
+
+```bash
+make mbt-multi \
+    MBT_EXPERIMENTS_FILE= \
+    MBT_EXPERIMENTS=mbt_baseline,mbt_s2,mbt_lr3e4 \
+    MBT_BASE_OVERRIDES="training.epochs=5 output.use_mlflow=true"
+```
+
+### Batch experiments from YAML/JSON file
+
+Command:
+
+```bash
+python main.py multimodal-batch \
+    --experiments-file configs/mbt_experiments.yaml \
+    --base-overrides training.batch_size=16 \
+    --stop-on-error
+```
+
+Accepted file shapes:
+
+```yaml
+experiments:
+    - name: mbt_baseline
+    - name: mbt_s2
+        overrides:
+            data.split_type: s2
+    - name: mbt_lr3e4
+        overrides:
+            training.lr: 3e-4
+```
+
+or:
+
+```json
+[
+    {"name": "mbt_baseline"},
+    {"name": "mbt_s2", "overrides": ["data.split_type=s2"]},
+    {"name": "mbt_lr3e4", "overrides": {"training.lr": "3e-4"}}
+]
+```

@@ -1,4 +1,4 @@
-.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline check-gpu
+.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline check-gpu mbt-run mbt-multi
 
 # Visual pipeline defaults (override at runtime, e.g. make visual-train EPOCHS=10 DEVICE=0)
 DATASET_ROOT ?= store/data/raw/visual_data
@@ -18,6 +18,14 @@ REQUIRE_GPU ?= 1
 DATA_YAML ?= $(DATASET_ROOT)/yolo_nano/mmcows_binary.yaml
 VISUAL_PROJECT ?= store/models/visual
 
+# Multimodal MBT runner defaults (Hydra overrides are passed through as plain args)
+MBT_RUN_NAME ?= mbt_single_run
+MBT_OVERRIDES ?=
+MBT_EXPERIMENTS ?= mbt_baseline,mbt_s2,mbt_lr3e4
+MBT_BASE_OVERRIDES ?=
+MBT_EXPERIMENTS_FILE ?= configs/mbt_experiments.yaml
+MBT_STOP_ON_ERROR ?= 1
+
 # Default command when you just type 'make'
 help:
 	@echo "mmcows PFA Management Commands:"
@@ -28,12 +36,18 @@ help:
 	@echo "  make visual-yolo     - Generate YOLO train/val/test + yaml"
 	@echo "  make visual-train    - Train YOLOv8 model"
 	@echo "  make visual-pipeline - Run visual index -> yolo -> train"
+	@echo "  make mbt-run         - Run one multimodal MBT experiment"
+	@echo "  make mbt-multi       - Run multiple multimodal MBT experiments"
 	@echo "  Example overrides:"
 	@echo "    make visual-train EPOCHS=10 DEVICE=0 RUN_NAME=exp_gpu"
 	@echo "    make visual-index DATE_FOLDER=0726 CAMERAS=cam_1,cam_3"
 	@echo "    make visual-pipeline MODEL=yolov8s.pt BATCH=8 WORKERS=2 VISUAL_EXPERIMENT_NAME=Visual_Exp"
 	@echo "    make visual-pipeline DEVICE=0 REQUIRE_GPU=1"
 	@echo "    make visual-pipeline DEVICE=cpu REQUIRE_GPU=0"
+	@echo "    make mbt-run MBT_RUN_NAME=mbt_test MBT_OVERRIDES=\"training.epochs=2 output.use_mlflow=false\""
+	@echo "    make mbt-multi"
+	@echo "    make mbt-multi MBT_EXPERIMENTS=mbt_a,mbt_b MBT_BASE_OVERRIDES=\"training.epochs=5\" MBT_EXPERIMENTS_FILE="
+	@echo "    make mbt-multi MBT_EXPERIMENTS_FILE=configs/mbt_experiments.yaml"
 	@echo "  make ui        - Start the MLflow UI on port 5000"
 	@echo "  make clean     - Remove caches and temporary files"
 
@@ -78,6 +92,24 @@ visual-train: check-gpu
 
 visual-pipeline: check-gpu
 	python -m src.visual.pipelines.training_pipeline --dataset-root $(DATASET_ROOT) --date-folder $(DATE_FOLDER) --cameras $(CAMERAS) --split-ratios $(SPLIT_RATIOS) --seed $(SEED) --model $(MODEL) --epochs $(EPOCHS) --imgsz $(IMGSZ) --batch $(BATCH) --device $(DEVICE) --workers $(WORKERS) --run-name $(RUN_NAME) --experiment-name $(VISUAL_EXPERIMENT_NAME)
+
+mbt-run:
+	python main.py multimodal --run-name $(MBT_RUN_NAME) --overrides $(MBT_OVERRIDES)
+
+mbt-multi:
+	@if [ -n "$(MBT_EXPERIMENTS_FILE)" ]; then \
+		if [ "$(MBT_STOP_ON_ERROR)" = "1" ]; then \
+			python main.py multimodal-batch --experiments-file $(MBT_EXPERIMENTS_FILE) --base-overrides $(MBT_BASE_OVERRIDES) --stop-on-error; \
+		else \
+			python main.py multimodal-batch --experiments-file $(MBT_EXPERIMENTS_FILE) --base-overrides $(MBT_BASE_OVERRIDES); \
+		fi; \
+	else \
+		if [ "$(MBT_STOP_ON_ERROR)" = "1" ]; then \
+			python main.py multimodal-batch --experiments $(MBT_EXPERIMENTS) --base-overrides $(MBT_BASE_OVERRIDES) --stop-on-error; \
+		else \
+			python main.py multimodal-batch --experiments $(MBT_EXPERIMENTS) --base-overrides $(MBT_BASE_OVERRIDES); \
+		fi; \
+	fi
 
 # Launch MLflow to see experiment results
 ui:

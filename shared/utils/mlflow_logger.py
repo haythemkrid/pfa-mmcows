@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -49,12 +49,26 @@ class MLflowLogger:
             mlflow.set_experiment(experiment_name)
             print(f"MLflow experiment set to: {experiment_name}")
 
-    def start_run(self):
-        """Starts an MLflow run and logs configuration parameters."""
+    @staticmethod
+    def _flatten_dict(data: Dict[str, Any], parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+        """Flattens nested dictionaries for MLflow parameter logging."""
+        flat: Dict[str, Any] = {}
+        for key, value in data.items():
+            new_key = f"{parent_key}{sep}{key}" if parent_key else str(key)
+            if isinstance(value, dict):
+                flat.update(MLflowLogger._flatten_dict(value, new_key, sep))
+            else:
+                flat[new_key] = value
+        return flat
+
+    def start_run(self, run_name: Optional[str] = None, params: Optional[Dict[str, Any]] = None):
+        """Starts an MLflow run and optionally logs flattened parameters."""
         if self.enabled:
-            run_name = self.config.get("modality", "unknown")
-            self.active_run = mlflow.start_run(run_name=run_name)
-            mlflow.log_params(self.config)
+            default_name = self.config.get("modality", "unknown")
+            self.active_run = mlflow.start_run(run_name=run_name or default_name)
+
+            to_log = params if params is not None else self.config
+            self.log_params(to_log)
         return self.active_run
 
     def log_artifact(self, local_path: str):
@@ -62,10 +76,13 @@ class MLflowLogger:
         if self.enabled and self.active_run:
             mlflow.log_artifact(local_path)
 
-    def log_metrics(self, metrics: Dict[str, Any]):
-        """Logs multiple metrics to MLflow."""
+    def log_metrics(self, metrics: Dict[str, Any], step: Optional[int] = None):
+        """Logs multiple metrics to MLflow, optionally at a specific step."""
         if self.enabled and self.active_run:
-            mlflow.log_metrics(metrics)
+            if step is None:
+                mlflow.log_metrics(metrics)
+            else:
+                mlflow.log_metrics(metrics, step=step)
             
     def end_run(self):
         """Ends the active MLflow run."""
@@ -73,6 +90,16 @@ class MLflowLogger:
             mlflow.end_run()
     
     def log_params(self, params: dict) -> None:
-        """Logs a dictionary of parameters to MLflow."""
-        if self.enabled:
-            mlflow.log_params(params)
+        """Logs flattened parameters to MLflow."""
+        if self.enabled and self.active_run:
+            flat_params = self._flatten_dict(params)
+            filtered: Dict[str, Any] = {}
+
+            for key, value in flat_params.items():
+                if isinstance(value, (str, int, float, bool)) or value is None:
+                    filtered[key] = value
+                else:
+                    filtered[key] = str(value)
+
+            if filtered:
+                mlflow.log_params(filtered)

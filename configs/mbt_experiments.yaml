@@ -1,0 +1,19 @@
+experiments:
+  - name: mbt_default_params
+
+  - name: mbt_baseline
+    overrides:
+      training.epochs: 5
+      output.use_mlflow: true
+
+  - name: mbt_s2
+    overrides:
+      data.split_type: s2
+      training.epochs: 5
+      output.use_mlflow: true
+
+  - name: mbt_lr3e4
+    overrides:
+      training.lr: 3e-4
+      training.epochs: 5
+      output.use_mlflow: true
