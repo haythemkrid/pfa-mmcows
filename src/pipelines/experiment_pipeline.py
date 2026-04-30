@@ -6,9 +6,9 @@ from typing import Dict, Any, Tuple
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-from src.shared.base.pipeline import BasePipeline
-from src.shared.utils.config import load_config
-from src.shared.utils.mlflow_logger import MLflowLogger
+from shared.base.pipeline import BasePipeline
+from shared.utils.config import load_config
+from shared.utils.mlflow_logger import MLflowLogger
 
 from src.sensor.data.loader import get_splits
 from src.sensor.features.factory import FeatureFactory

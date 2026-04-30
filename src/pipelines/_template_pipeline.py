@@ -1,9 +1,9 @@
 import pandas as pd
 from typing import Dict, Any
 
-from src.shared.base.pipeline import BasePipeline
-from src.shared.utils.logger import logger
-from src.shared.utils.mlflow_logger import MLflowLogger
+from shared.base.pipeline import BasePipeline
+from shared.utils.logger import logger
+from shared.utils.mlflow_logger import MLflowLogger
 from src.sensor.features.factory import FeatureFactory
 
 class TemplatePipeline(BasePipeline):
