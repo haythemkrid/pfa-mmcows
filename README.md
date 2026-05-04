@@ -2,232 +2,125 @@
 
 Projet ML structure pour MMCows (sensor + visual + fusion).
 
-## Migration visual depuis mmcows-visual
+# pfa-mmcows
 
-Le travail visual a ete migre dans ce repo, sans modifier le repo source.
+Project for multimodal cow behaviour analysis (sensor + visual + fusion).
 
-Scripts principaux migres:
-- src/visual/data/a1_build_index.py
-- src/visual/data/a2_yolo_binary.py
-- src/visual/data/remap_labels_single_class.py
-- src/visual/models/train.py
-- src/visual/pipelines/training_pipeline.py
+This repository contains data processing, models, and training pipelines
+for the MMCows multimodal project. It includes:
 
-## Prerequis
+- sensor data loaders and preprocessing (UWB/IMU)
+- visual dataset indexing and YOLO-based visual pipelines
+- multimodal fusion models (Multimodal Bottleneck Transformer — MBT)
+- reusable training pipeline scaffolds and Hydra-based configs
+- utilities for logging, MLflow integration and resumable training
 
-1. Installer les dependances:
+This README is organised by concern so you can quickly find what you
+need to run experiments, implement new pipelines, or extend the codebase.
+
+Contents
+- [Prerequisites](#prerequisites)
+- [Repository layout](#repository-layout)
+- [Pipeline template & conventions](#pipeline-template--conventions)
+- [Quickstart: Visual pipeline](#quickstart-visual-pipeline)
+- [Quickstart: MBT multimodal training](#quickstart-mbt-multimodal-training)
+- [Hydra usage & common overrides](#hydra-usage--common-overrides)
+- [Resuming, checkpoints and MLflow](#resuming-checkpoints-and-mlflow)
+- [Development: testing and examples](#development-testing-and-examples)
+
+
+## Prerequisites
+
+1. Create and activate your Python virtualenv and install dependencies:
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. Verifier que les donnees visual sont sous:
+2. (Optional) Some pipelines use additional requirements. See individual
+   folders or `requirements_mbt.txt` for MBT-specific deps.
 
-```text
-store/data/raw/visual_data/
-	images/0725/cam_1 ... cam_4
-	labels/0725/cam_1 ... cam_4
-```
 
-## Execution rapide
+## Repository layout
 
-1. Construire index dataset:
+Top-level highlights:
+
+- `src/` — code for data loaders, models, pipelines and utilities
+- `configs/` — Hydra / experiment configs
+- `store/` — data storage (raw, clean, features)
+- `logs/` — MLflow and pipeline run outputs
+- `scripts/`, `Makefile` — convenient helpers and Make targets
+
+
+## Pipeline template & conventions
+
+We provide a small scaffold to keep training pipelines consistent and
+testable: see `src/multimodal/pipelines/pipeline_template.py` which defines a
+`TemplateTrainingPipeline` with explicit hooks to implement:
+
+- `_prepare_data()` — return `(train_loader, val_loader)`
+- `_build_components()` — build and return `(model, optimizer, scheduler)`
+- `_train_epoch(model, loader, optimizer)` — run a single epoch and return metrics
+- `_save_checkpoint(path, state)` and `_load_checkpoint(path, device)`
+
+Guidelines:
+- Keep `run()` thin: orchestration only; heavy logic should be in protected methods
+- Keep MLflow / external integrations behind small helper methods so they can be mocked
+- Save `last.pt` every epoch and `best.pt` when validation improves; mark completed runs
+
+Follow the template by copying `pipeline_template.py` and implementing the
+protected methods for your new pipeline. A README copy is located at
+`src/multimodal/pipelines/README.md` with additional tips.
+
+
+## Quickstart: Visual pipeline
+
+Examples for the visual (YOLO) pipelines are provided under `src/visual`.
+
+Typical commands (Make targets wrap these):
 
 ```bash
+# build dataset index
 make visual-index
-```
 
-2. Generer artefacts YOLO (train/val/test + yaml):
-
-```bash
+# prepare YOLO artifacts (train/val/test splits and YAML)
 make visual-yolo
-```
 
-3. Entrainer YOLOv8:
-
-```bash
+# train YOLO (uses configs in configs/)
 make visual-train
-```
 
-Ou tout en une commande:
-
-```bash
+# run the whole visual pipeline
 make visual-pipeline
 ```
 
-## DVC
+Data layout expected for visual assets:
 
-Le pipeline DVC inclut 3 stages visual:
-- visual_build_index
-- visual_prepare_yolo
-- visual_train
-
-Lancer:
-
-```bash
-dvc repro
+```
+store/data/raw/visual_data/
+    images/...
+    labels/...
 ```
 
 
+## Quickstart: MBT multimodal training
 
+The main MBT training entrypoint is `src/multimodal/pipelines/training_pipeline.py`.
 
-# Running the MBT Training Pipeline
-
-## 1. Install dependencies
+Install MBT-specific dependencies if required:
 
 ```bash
-cd pfa-mmcows
 pip install -r requirements_mbt.txt
 ```
 
----
-
-## 2. Protect your session (critical for long runs)
-
-The training takes multiple days.  Wrap it in **tmux** so that a
-disconnect never kills the process.
+Run a default training run (Hydra-managed config):
 
 ```bash
-# Start a named session
-tmux new -s mbt_train
-
-# Inside the tmux session, run the pipeline (see step 4).
-# To detach without killing the process:  Ctrl+B  then  D
-# To reattach from any terminal later:
-tmux attach -t mbt_train
-```
-
-If tmux is unavailable, use `nohup`:
-```bash
-nohup python -m src.multimodal.pipelines.training_pipeline \
-    > logs/mbt_runs/nohup.out 2>&1 &
-echo $!   # save this PID — use  kill <PID>  to stop gracefully
-```
-
----
-
-## 3. Directory layout after the pipeline runs
-
-```
-pfa-mmcows/
-└── logs/
-    ├── mlflow/                        ← MLflow artefact store
-    └── mbt_runs/
-        └── 20250424_093012/           ← one directory per run
-            ├── config.yaml            ← exact config used (for reproducibility)
-            ├── train.log              ← structured JSON log (one event per line)
-            ├── fold_1/
-            │   ├── best.pt            ← best-F1 checkpoint for this fold
-            │   └── last.pt            ← last-epoch checkpoint (for resuming)
-            ├── fold_2/
-            │   ├── best.pt
-            │   └── last.pt
-            ...
-```
-
----
-
-## 4. First run
-
-```bash
-# From the repo root
 python -m src.multimodal.pipelines.training_pipeline
 ```
 
-Hydra writes its own output to `outputs/` by default.  All training
-artefacts go to `logs/mbt_runs/<timestamp>/`.
-
----
-
-## 5. Override any config value on the command line
-
-```bash
-# Change learning rate and number of bottleneck tokens
-python -m src.multimodal.pipelines.training_pipeline \
-    training.lr=3e-4 \
-    model.num_bottleneck_tokens=8 \
-    training.batch_size=16
-
-# Use temporal split instead of object-wise
-python -m src.multimodal.pipelines.training_pipeline \
-    data.split_type=s2
-
-# Disable MLflow (useful for quick debug runs)
-python -m src.multimodal.pipelines.training_pipeline \
-    output.use_mlflow=false \
-    training.epochs=2
-```
-
----
-
-## 6. Resume after a crash or disconnect
-
-The pipeline automatically resumes.  Just re-run with the **same run_name**:
-
-```bash
-python -m src.multimodal.pipelines.training_pipeline \
-    experiment.run_name=20250424_093012
-```
-
-What happens:
-- Folds whose `best.pt` has `completed: true` are **skipped entirely**.
-- The interrupted fold resumes from `last.pt` (saved every epoch).
-- All log entries are **appended** to `train.log` (never overwritten).
-
----
-
-## 7. Monitor training in real time
-
-```bash
-# Stream the structured log and pretty-print each JSON line
-tail -f logs/mbt_runs/<run_name>/train.log | python -m json.tool
-
-# Filter only epoch events
-tail -f logs/mbt_runs/<run_name>/train.log | grep '"event": "epoch"'
-
-# Watch val F1 per fold
-tail -f logs/mbt_runs/<run_name>/train.log \
-    | python -c "
-import sys, json
-for line in sys.stdin:
-    r = json.loads(line)
-    if r.get('event') == 'epoch':
-        print(f\"fold={r['fold']}  epoch={r['epoch']:3d}  \
-val_f1={r['val_f1']:.4f}  val_loss={r['val_loss']:.5f}\")
-"
-```
-
-Launch the MLflow UI (in a separate tmux pane):
-```bash
-mlflow ui --backend-store-uri logs/mlflow --port 5000
-# Then open http://localhost:5000 in VS Code's port-forward tab
-```
-
----
-
-## 8. Load a saved checkpoint for inference
-
-```python
-import torch
-from src.multimodal.models.mbt import MultimodalBottleneckTransformer
-from omegaconf import OmegaConf
-
-cfg = OmegaConf.load("logs/mbt_runs/<run_name>/config.yaml")
-model = MultimodalBottleneckTransformer.from_config(cfg.model)
-
-ckpt = torch.load("logs/mbt_runs/<run_name>/fold_1/best.pt", map_location="cpu")
-model.load_state_dict(ckpt["model"])
-model.eval()
-
-print(f"Loaded best model from fold_1  (val F1 = {ckpt['best_f1']:.4f})")
-```
-
----
-
-## 9. Quick smoke-test (no data needed)
-
-Run for 2 epochs on CPU to verify the full pipeline compiles and saves
-checkpoints correctly:
+Run a quick smoke-test (CPU, 2 epochs):
 
 ```bash
 python -m src.multimodal.pipelines.training_pipeline \
@@ -239,90 +132,64 @@ python -m src.multimodal.pipelines.training_pipeline \
     experiment.run_name=smoke_test
 ```
 
+Long-running runs: run inside `tmux` or `nohup` so disconnects do not kill the job.
+
+
+## Hydra usage & common overrides
+
+All pipelines are configurable via Hydra. Override config values on the
+command-line using the `key=value` syntax. Examples:
+
+```bash
+python -m src.multimodal.pipelines.training_pipeline \
+    training.lr=3e-4 \
+    model.num_bottleneck_tokens=8 \
+    training.batch_size=16
+
+python -m src.multimodal.pipelines.training_pipeline \
+    data.split_type=s2
+
+python -m src.multimodal.pipelines.training_pipeline \
+    output.use_mlflow=false \
+    training.epochs=2
+```
+
+
+## Resuming, checkpoints and MLflow
+
+- The MBT pipeline saves `last.pt` each epoch and `best.pt` when validation
+  improves. `best.pt` is annotated with `completed: true` when a fold finishes.
+- To resume, re-run with the same `experiment.run_name` — the pipeline will
+  skip folds already completed and resume from the appropriate `last.pt`.
+- MLflow integration is optional and controlled by `output.use_mlflow` in the
+  config. Credentials can be provided via a `.env` file or environment vars.
+
+Monitor logs at `logs/mbt_runs/<run_name>/train.log`; MLflow UI can be served
+from `logs/mlflow` with `mlflow ui --backend-store-uri logs/mlflow`.
+
+
+## Development: testing and examples
+
+- Add unit tests for `_train_epoch` implementations to cover core training
+  behaviour (loss/backprop, metric calculation, gradient clipping).
+- Consider adding a small runnable example pipeline in
+  `src/multimodal/pipelines/examples/` that trains on synthetic data for CI.
+
+
+## Contributing
+
+1. Open an issue describing the change.
+2. Create a feature branch and a clear PR, referencing the issue.
+3. Add/adjust tests where appropriate.
+
+
 ---
 
-## 10. Run multiple MBT experiments from one command
+If you'd like, I can now:
 
-You can now orchestrate single or batch multimodal runs through `main.py`
-and Make targets.
+1. Replace the pipeline-folder README into the main README (migrate content),
+2. Add a concrete example pipeline that subclasses the template and runs on synthetic data,
+3. Add a small test that runs the smoke-test command in CI.
 
-### Single experiment
-
-With `main.py`:
-
-```bash
-python main.py multimodal \
-    --run-name mbt_single \
-    --overrides training.epochs=2 output.use_mlflow=false
-```
-
-With Make:
-
-```bash
-make mbt-run \
-    MBT_RUN_NAME=mbt_single \
-    MBT_OVERRIDES="training.epochs=2 output.use_mlflow=false"
-```
-
-### Batch experiments (comma-separated run names)
-
-With `main.py`:
-
-```bash
-python main.py multimodal-batch \
-    --experiments mbt_baseline,mbt_s2,mbt_lr3e4 \
-    --base-overrides training.epochs=5 output.use_mlflow=true
-```
-
-With Make:
-
-```bash
-make mbt-multi \
-    MBT_BASE_OVERRIDES="training.epochs=5 output.use_mlflow=true"
-```
-
-By default, `make mbt-multi` loads experiments from
-`configs/mbt_experiments.yaml`.
-
-If you want comma-separated names instead, clear `MBT_EXPERIMENTS_FILE`:
-
-```bash
-make mbt-multi \
-    MBT_EXPERIMENTS_FILE= \
-    MBT_EXPERIMENTS=mbt_baseline,mbt_s2,mbt_lr3e4 \
-    MBT_BASE_OVERRIDES="training.epochs=5 output.use_mlflow=true"
-```
-
-### Batch experiments from YAML/JSON file
-
-Command:
-
-```bash
-python main.py multimodal-batch \
-    --experiments-file configs/mbt_experiments.yaml \
-    --base-overrides training.batch_size=16 \
-    --stop-on-error
-```
-
-Accepted file shapes:
-
-```yaml
-experiments:
-    - name: mbt_baseline
-    - name: mbt_s2
-        overrides:
-            data.split_type: s2
-    - name: mbt_lr3e4
-        overrides:
-            training.lr: 3e-4
-```
-
-or:
-
-```json
-[
-    {"name": "mbt_baseline"},
-    {"name": "mbt_s2", "overrides": ["data.split_type=s2"]},
-    {"name": "mbt_lr3e4", "overrides": {"training.lr": "3e-4"}}
-]
-```
+Tell me which of the above you'd like me to do next.
+    if r.get('event') == 'epoch':
