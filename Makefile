@@ -1,4 +1,4 @@
-.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline check-gpu mbt-run mbt-multi
+.PHONY: help init pull repro ui clean visual-index visual-yolo visual-train visual-pipeline check-gpu mbt-run mbt-multi mbt-smoke-fast mbt-backfill-run
 
 # Visual pipeline defaults (override at runtime, e.g. make visual-train EPOCHS=10 DEVICE=0)
 DATASET_ROOT ?= store/data/raw/visual_data
@@ -25,6 +25,13 @@ MBT_EXPERIMENTS ?= mbt_baseline,mbt_s2,mbt_lr3e4
 MBT_BASE_OVERRIDES ?=
 MBT_EXPERIMENTS_FILE ?= configs/mbt_experiments.yaml
 MBT_STOP_ON_ERROR ?= 1
+MBT_SMOKE_RUN_NAME ?= smoke_fast
+MBT_SMOKE_OVERRIDES ?= training.epochs=1 training.batch_size=16 data.num_workers=4 data.cache_images=true data.num_folds=1 data.sensor_cow_ids=[1] data.cameras=[1] data.target_rate_hz=1.0 data.window_size_s=60 data.overlap=0.0 output.use_mlflow=false model.visual_pretrained=false
+BACKFILL_RUN_NAME ?= run1
+BACKFILL_EXPERIMENT_NAME ?= mbt_uwb_rgb
+BACKFILL_MODEL_NAME ?= mmcows-multimodal-mbt
+BACKFILL_TARGET_RUN_ID ?=
+BACKFILL_REGISTER ?= 1
 
 # Default command when you just type 'make'
 help:
@@ -38,6 +45,8 @@ help:
 	@echo "  make visual-pipeline - Run visual index -> yolo -> train"
 	@echo "  make mbt-run         - Run one multimodal MBT experiment"
 	@echo "  make mbt-multi       - Run multiple multimodal MBT experiments"
+	@echo "  make mbt-smoke-fast  - Run a fast 1-epoch MBT smoke test"
+	@echo "  make mbt-backfill-run - Backfill artifacts/model to MLflow for an existing local run"
 	@echo "  Example overrides:"
 	@echo "    make visual-train EPOCHS=10 DEVICE=0 RUN_NAME=exp_gpu"
 	@echo "    make visual-index DATE_FOLDER=0726 CAMERAS=cam_1,cam_3"
@@ -45,6 +54,10 @@ help:
 	@echo "    make visual-pipeline DEVICE=0 REQUIRE_GPU=1"
 	@echo "    make visual-pipeline DEVICE=cpu REQUIRE_GPU=0"
 	@echo "    make mbt-run MBT_RUN_NAME=mbt_test MBT_OVERRIDES=\"training.epochs=2 output.use_mlflow=false\""
+	@echo "    make mbt-smoke-fast"
+	@echo "    make mbt-smoke-fast MBT_SMOKE_RUN_NAME=smoke_gpu MBT_SMOKE_OVERRIDES=\"training.batch_size=8 output.use_mlflow=true\""
+	@echo "    make mbt-backfill-run BACKFILL_RUN_NAME=run1"
+	@echo "    make mbt-backfill-run BACKFILL_RUN_NAME=run1 BACKFILL_TARGET_RUN_ID=<run_id> BACKFILL_REGISTER=0"
 	@echo "    make mbt-multi"
 	@echo "    make mbt-multi MBT_EXPERIMENTS=mbt_a,mbt_b MBT_BASE_OVERRIDES=\"training.epochs=5\" MBT_EXPERIMENTS_FILE="
 	@echo "    make mbt-multi MBT_EXPERIMENTS_FILE=configs/mbt_experiments.yaml"
@@ -110,6 +123,12 @@ mbt-multi:
 			python main.py multimodal-batch --experiments $(MBT_EXPERIMENTS) --base-overrides $(MBT_BASE_OVERRIDES); \
 		fi; \
 	fi
+
+mbt-smoke-fast:
+	python main.py multimodal --run-name $(MBT_SMOKE_RUN_NAME) --overrides $(MBT_SMOKE_OVERRIDES)
+
+mbt-backfill-run:
+	python scripts/backfill_mbt_run.py --run-name $(BACKFILL_RUN_NAME) --experiment-name $(BACKFILL_EXPERIMENT_NAME) --model-name $(BACKFILL_MODEL_NAME) $(if $(BACKFILL_TARGET_RUN_ID),--target-run-id $(BACKFILL_TARGET_RUN_ID),) $(if $(filter 1,$(BACKFILL_REGISTER)),--register,--no-register)
 
 # Launch MLflow to see experiment results
 ui:

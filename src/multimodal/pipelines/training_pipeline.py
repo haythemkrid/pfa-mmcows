@@ -275,6 +275,9 @@ class MultimodalTrainingPipeline(BasePipeline):
                 all_preds.extend(logits.argmax(dim=-1).detach().cpu().tolist())
                 all_labels.extend(labels.detach().cpu().tolist())
 
+        if not all_labels:
+            return 0.0, 0.0
+
         mean_loss = total_loss / max(len(all_labels), 1)
         macro_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
         return mean_loss, float(macro_f1)
@@ -560,6 +563,13 @@ class MultimodalTrainingPipeline(BasePipeline):
         elif self.config_path.exists():
             self.mlflow_logger.log_artifact(str(self.config_path))
 
+        # Always attach the best checkpoint as a run artifact for traceability,
+        # even if model registry conditions are not met.
+        if self.best_model_info is not None:
+            best_ckpt = Path(self.best_model_info.get("checkpoint_path", ""))
+            if best_ckpt.exists():
+                self.mlflow_logger.log_artifact(str(best_ckpt))
+
     def run(self) -> None:
         self._log_event(
             event="start",
@@ -575,8 +585,19 @@ class MultimodalTrainingPipeline(BasePipeline):
                 s1_path=self.cfg.data.config_s1_path,
                 s2_path=self.cfg.data.config_s2_path,
             )
-            folds = split_config.available_folds(self.cfg.data.split_type)
-            self._log_event(event="folds", folds=folds, split_type=self.cfg.data.split_type)
+            available_folds = split_config.available_folds(self.cfg.data.split_type)
+            requested_num_folds = int(self.cfg.data.num_folds)
+            if requested_num_folds <= 0:
+                raise ValueError("data.num_folds must be >= 1")
+
+            folds = available_folds[: min(requested_num_folds, len(available_folds))]
+            self._log_event(
+                event="folds",
+                split_type=self.cfg.data.split_type,
+                requested_num_folds=requested_num_folds,
+                available_folds=available_folds,
+                selected_folds=folds,
+            )
 
             X_sensor, y, cow_ids, ts = self._prepare_sensor_data()
             frame_index = FrameIndex(
@@ -613,6 +634,22 @@ class MultimodalTrainingPipeline(BasePipeline):
                     split_type=self.cfg.data.split_type,
                     fold=fold,
                 )
+
+                # Some smoke-test slices can yield an empty validation split.
+                # Fallback to a small deterministic holdout to keep training/eval runnable.
+                if val_df.empty and not train_df.empty:
+                    fallback_n = max(1, int(round(0.1 * len(train_df))))
+                    fallback_n = min(fallback_n, len(train_df))
+                    fallback_val = train_df.sample(n=fallback_n, random_state=42)
+                    train_df = train_df.drop(index=fallback_val.index)
+                    val_df = fallback_val
+                    self._log_event(
+                        event="val_fallback",
+                        fold=fold,
+                        reason="empty_validation_split",
+                        fallback_val_size=int(len(val_df)),
+                        fallback_train_size=int(len(train_df)),
+                    )
 
                 def _make_ds(df: pd.DataFrame, is_train: bool) -> MBTDataset:
                     idx = df["_idx"].values
@@ -655,8 +692,11 @@ class MultimodalTrainingPipeline(BasePipeline):
 
             if self.mlflow_logger is not None:
                 self.mlflow_logger.log_metrics({"cv_mean_f1": mean_f1, "cv_std_f1": std_f1})
-                self._register_best_model_if_qualified()
                 self._log_run_artifacts()
+                try:
+                    self._register_best_model_if_qualified()
+                except Exception as exc:
+                    self._log_event(event="registry_error", error=str(exc))
 
             print(f"\nCV macro-F1 = {mean_f1:.4f} +- {std_f1:.4f}")
         finally:

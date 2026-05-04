@@ -3,7 +3,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 
@@ -66,16 +66,19 @@ def _load_experiment_file(path: str) -> List[Tuple[str, List[str]]]:
     return [_normalize_experiment_record(item) for item in experiments]
 
 
-def _run_multimodal_experiment(run_name: str, overrides: List[str]) -> int:
+def _run_multimodal_experiment(run_name: Optional[str], overrides: List[str]) -> int:
     command = [
         sys.executable,
         "-m",
         "src.multimodal.pipelines.training_pipeline",
-        f"experiment.run_name={run_name}",
-        *overrides,
     ]
 
-    LOGGER.info("Running experiment '%s'", run_name)
+    if run_name:
+        command.append(f"experiment.run_name={run_name}")
+
+    command.extend(overrides)
+
+    LOGGER.info("Running experiment '%s'", run_name if run_name else "<auto>")
     LOGGER.info("Command: %s", " ".join(command))
     completed = subprocess.run(command, check=False)
     return completed.returncode
@@ -116,7 +119,11 @@ def main() -> None:
         "multimodal",
         help="Run one multimodal experiment with optional Hydra overrides",
     )
-    run_parser.add_argument("--run-name", required=True, help="Hydra run name (experiment.run_name)")
+    run_parser.add_argument(
+        "--run-name",
+        required=False,
+        help="Optional Hydra run name (experiment.run_name). If omitted, config default is used.",
+    )
     run_parser.add_argument(
         "--overrides",
         nargs="*",
