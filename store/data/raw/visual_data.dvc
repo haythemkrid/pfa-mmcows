@@ -1,0 +1,6 @@
+outs:
+- md5: 4c25faba8a62a2ccce48c8860b1f6cb8.dir
+  size: 21254791026
+  nfiles: 100809
+  hash: md5
+  path: visual_data
