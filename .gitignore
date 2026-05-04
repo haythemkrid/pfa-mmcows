@@ -57,3 +57,6 @@ mlflow.dblogs/
 runs/
 logs/
 logs/*
+# DVC, credentials, and Python env (auto-added by setup script)
+/.env
+/.venv

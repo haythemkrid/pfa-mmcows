@@ -1,9 +1,5 @@
 [core]
     remote = origin
-[cache]
-    dir = /opt/dvc_shared_cache
-    type = symlink
-    shared = group
 ['remote "origin"']
     url = s3://dvc
     endpointurl = https://dagshub.com/haythemkrid/pfa-mmcows.s3
