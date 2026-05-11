@@ -1,0 +1,6 @@
+outs:
+- md5: 2f33b6d23efcb9ef69cf148e7cf380b0.dir
+  size: 8493240443
+  nfiles: 2828
+  hash: md5
+  path: MultiviewX
