@@ -5,7 +5,7 @@
 # Data tracked by DVC, not Git
 
 # 1. Ignore everything in these folders first
-store/data/raw/*
+store/data/
 store/data/processed/*
 store/models/*
 
