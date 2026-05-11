@@ -54,5 +54,4 @@ mlruns/
 outputs/
 mlflow.dblogs/
 
-runs/
 logs/
