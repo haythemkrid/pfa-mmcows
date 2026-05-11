@@ -1,7 +1,7 @@
 stages:
   visual_build_index:
     cmd: >
-      python src/visual/data/a1_build_index.py
+      python -m src.visual.data.a1_build_index
       --dataset-root store/data/raw/visual_data
       --date-folder 0725
       --cameras cam_1,cam_2,cam_3,cam_4
@@ -17,8 +17,9 @@ stages:
 
   visual_prepare_yolo:
     cmd: >
-      python src/visual/data/a2_yolo_binary.py
+      python -m src.visual.data.a2_yolo_binary
       --dataset-root store/data/raw/visual_data
+      --remap-labels-in-place
     deps:
       - src/visual/data/a2_yolo_binary.py
       - store/data/raw/visual_data/dataset_index.pkl
@@ -30,7 +31,7 @@ stages:
 
   visual_train:
     cmd: >
-      python src/visual/models/train.py
+      python -m src.visual.models.train
       --data-yaml store/data/raw/visual_data/yolo_nano/mmcows_binary.yaml
       --model yolov8n.pt
       --epochs 50

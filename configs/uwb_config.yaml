@@ -1,0 +1,30 @@
+experiment_name: "Feature_Selection"
+modality: "uwb"
+
+data:
+  sensor_data_dir: "/home/haythem/pfa-mmcows/store/data/raw/sensor_data"
+  pre_loader: "uwb_pre_data_loader"
+  date: "0725"
+  fold_config:
+    train: [1, 2]
+    val: [3]
+    test: [4]
+
+features:
+  lag_steps: [1, 2, 3, 4]
+  roll_windows: [3, 5]
+
+selection:
+  variance_threshold: 1e-10
+  pearson_threshold: 0.9
+  rf_n_estimators: 200
+
+evaluation:
+  k_values: [20, 50, 100, 'all']
+
+mlflow:
+  enabled: true
+  experiment_name: "Sensor_Feature_Selection"
+  tracking_uri: "https://dagshub.com/haythemkrid/pfa-mmcows.mlflow"
+
+output_dir: "results"

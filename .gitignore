@@ -1,3 +1,9 @@
+mlruns/
+results/
+__pycache__/
+
+*.pyc
+
 # NEVER commit credentials!
 .env
 .dvc/config.local  # Contains DVC credentials
@@ -41,21 +47,12 @@ build/
 dist/
 *.egg-info/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# ========================
+# 3. MLflow & Outputs
+# ========================
+mlruns/
+outputs/
+mlflow.dblogs/
 
-# OS
-.DS_Store
-Thumbs.db
-# DVC and credentials (auto-added by setup script)
-/.env
-
-
-# DVC, credentials, and Python env (auto-added by setup script)
-/.venv
-
-vscode_cli.tar.gz
+runs/
+logs/
